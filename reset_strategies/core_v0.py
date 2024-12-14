@@ -171,7 +171,6 @@ class CORE:
         
         # update clg coil temp change when closed
         if 'clg_coil_closed_temp_change' not in ahu_data_AV['Object_Name']:
-            self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = 0
             self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = 2
         else:
             self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'clg_coil_closed_temp_change') >= 0][0]
@@ -179,7 +178,6 @@ class CORE:
         # update reheat coil temp change when closed for all vavs (just for debugging purpose)
         for vav in self.vavs:
             if ('rhv_clo_temp_chg_' + vav) not in ahu_data_AV['Object_Name']:
-                self.estimations['rhv_clo_temp_chg_' + vav] = 0
                 self.estimations['rhv_clo_temp_chg_' + vav] = 2
             else:
                 self.estimations['rhv_clo_temp_chg_' + vav] = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'rhv_clo_temp_chg_' + vav) >= 0][0]
