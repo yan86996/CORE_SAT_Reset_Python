@@ -16,12 +16,7 @@ if __name__=='__main__':
     from rand_dates import *
     
     # initialization
-<<<<<<< HEAD
-    folder_dir = '../../bacnet_csvs'
-=======
-    folder_dir = os.path.abspath(os.path.join(script_dir, "..", "..", 'bacnet_csvs_test1'))
->>>>>>> effb00b (Initial commit)
-
+    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test1'))
     zones_5, zones_6, zones_7 = ['3-3', '3-4', '3-5'], ['3-22', '3-23', '3-24'], ['3-1', '3-2', '3-8', '3-9', '3-10']
     ahu_5, ahu_6, ahu_7 = 'AHU_5', 'AHU_6', 'AHU_7'
     zones_and_ahus = [(zones_5, ahu_5), (zones_6, ahu_6), (zones_7, ahu_7)]
@@ -51,16 +46,10 @@ if __name__=='__main__':
     elif date.today() in rand_dates_CORE:
         algo = 2 # CORE      
     else:
-<<<<<<< HEAD
         raise ValueError("Today is not in any of the rand rates")
-    
-    for zones, ahu in zones_and_ahus:
-=======
-        raise ValueError("Check the rand rates")
+
     
     for zones, ahu in [(zones_5, ahu_5)]:
->>>>>>> effb00b (Initial commit)
-        print(ahu)
         # instantiate temp requests objects
         temperature_requests = zone_requests.Temperature(verbose=False, folder_dir = folder_dir, zone_dev_map = devID_zoneID, zone_names=zones,                                                 
                                                          flow=flow, flow_min=flow_min, flow_max=flow_max, clg_setpoint=clg_setpoint,
@@ -69,21 +58,12 @@ if __name__=='__main__':
         # instantiate the reset object
         temperature_reset = reset.Reset(SPmin=sat_min, SPmax=sat_max, num_ignore=num_ignore, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max)
 
-<<<<<<< HEAD
         # G36 and CORE calculations will run whatever the date
-        # but will only overwrite the csv depending on the algo sequence number
-        
-        ###
-        ## G36 control    
-        ###     
-=======
-        # G36 and CORE calculations will be performed whatever the date
         # but will only overwrite the csv depending on the algo sequence number
         
         ###
         ## G36 control
         ###
->>>>>>> effb00b (Initial commit)
         # SP limits based on oat
         sp_min_at_lo_oat = 55
         sp_max_at_lo_oat = 65
