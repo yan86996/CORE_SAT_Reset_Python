@@ -1,0 +1,11 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3040500,binary-input,1,140W62nd - AHU-5 -   Supply Fan Status,active,
+3040500,binary-input,3,140W62nd - AHU-5 -   RF-5 Status,active,
+3040500,binary-input,10,140W62nd - AHU-5 - Freeze Alarm,active,
+3040500,binary-input,11,140W62nd - AHU-5 - Supply Fan Pressure Alarm,active,
+3040500,binary-input,12,140W62nd - AHU-5 - Return Fan Pressure Alarm,active,
+3040500,binary-input,101,140W62nd - AHU-5 -   TX-2 Status,active,
+3040500,binary-input,102,140W62nd - AHU-5 -   GX-3 (MER-2) Status,inactive,
+3040500,binary-input,110,140W62nd - AHU-5 - Supply Fan VFD Fault,inactive,
+3040500,binary-input,111,140W62nd - AHU-5 - Return Fan VFD Fault,inactive,
+3040500,binary-input,204,140W62nd - AHU-5 -   PRV Station  Status,inactive,

@@ -1,0 +1,16 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3040500,analog-input,2,140W62nd - AHU-5 -  Preheat Air Temperature 1,302,°F
+3040500,analog-input,4,140W62nd - AHU-5 -  Preheat Air Temperature 2,302,°F
+3040500,analog-input,5,140W62nd - AHU-5 -  Mixed Air Temperature,70,°F
+3040500,analog-input,6,140W62nd - AHU-5 -  Supply Air Temperature,58,°F
+3040500,analog-input,7,140W62nd - AHU-5 -  Supply Air Humidity,0,%RH
+3040500,analog-input,8,140W62nd - AHU-5 -  Supply Air CO2,0,ppm
+3040500,analog-input,9,140W62nd - AHU-5 -  Duct Static Pressure,0,inWC
+3040500,analog-input,14,140W62nd - AHU-5 -  Return Air Temperature,300,°F
+3040500,analog-input,15,140W62nd - AHU-5 -  Return Air Humidity,0,%RH
+3040500,analog-input,16,140W62nd - AHU-5 -  Return Air CO2,0,ppm
+3040500,analog-input,103,140W62nd - AHU-5 -  Outside Air Damper Feedback,99.8779,%
+3040500,analog-input,104,140W62nd - AHU-5 -  Return Air Damper Feedback,99.8366,%
+3040500,analog-input,201,140W62nd - AHU-5 -  Spill Air Damper Feedback,99.6642,%
+3040500,analog-input,202,140W62nd - AHU-5 -  PRV Station Pressure,0,psi
+3040500,analog-input,203,140W62nd - AHU-5 -   MER 2 (GX-3) Space Temperature,86.2498,°F

@@ -1,0 +1,4 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3031004,analog-input,1,VAVR-3-4- Supply Air Temperature,60,°F
+3031004,analog-input,5,VAVR-3-4- Airflow,1.20E+03,CFM
+3031004,analog-input,101,Space Temperature,76,°F

@@ -1,0 +1,11 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3040500,multi-state-value,1,140W62nd - AHU-5 -   Unit Mode,1,
+3040500,multi-state-value,2,140W62nd - AHU-5 -   Unit Status,3,
+3040500,multi-state-value,3,140W62nd - AHU-5 -   Unit HOA,1,
+3040500,multi-state-value,10,140W62nd - AHU-5 Supply Fan Failure,2,
+3040500,multi-state-value,11,140W62nd - AHU-5 Return Fan Failure,2,
+3040500,multi-state-value,12,140W62nd - AHU-5 - TX-2 Fan Failure,2,
+3040500,multi-state-value,20,140W62nd - AHU-5 -   Supply Setpoint Reset Selection,3,
+3040500,multi-state-value,930,140W62nd - AHU-5 -   VAV Mode,1,
+3040500,multi-state-value,931,140W62nd - AHU-5 -   VAV Override Command,2,
+3040500,multi-state-value,932,140W62nd - AHU-5 -   AHU Unit Mode,1,

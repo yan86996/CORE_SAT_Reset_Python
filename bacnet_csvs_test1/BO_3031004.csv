@@ -1,0 +1,5 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3031004,binary-output,1,VAVR-3-4 - Reheat Valve (Open),inactive,
+3031004,binary-output,2,VAVR-3-4 - Reheat Valve (Close),active,
+3031004,binary-output,5,Damper Counter-Clock- (Close),inactive,
+3031004,binary-output,6,Damper Clockwise- (Open),inactive,

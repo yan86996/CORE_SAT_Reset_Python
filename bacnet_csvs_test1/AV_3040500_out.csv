@@ -1,0 +1,55 @@
+# device,objecttype,instance,Object_Name,Present_Value,Units
+3040500,analog-value,1,140W62nd - AHU-5 -   Outside Air Temperature,66.3559,°F
+3040500,analog-value,2,140W62nd - AHU-5 -   Outside Air Humidity,63.0936,%RH
+3040500,analog-value,3,140W62nd - AHU-5 -   Outside Air Enthalpy,25.3915,BTU/lb
+3040500,analog-value,5,140W62nd - AHU-5 -   Return Air Enthalpy,72.0,BTU/lb
+3040500,analog-value,7,140W62nd - AHU-5 -   Preheat Temperature,302.0,°F
+3040500,analog-value,31,140W62nd - AHU-5 -   MER-2 (GX-3) Space  Temperature Setpoint,72.0,°F
+3040500,analog-value,40,140W62nd - AHU-5 -   Supply Air Setpoint,57.5,°F
+3040500,analog-value,41,140W62nd - AHU-5 -   Return Air Setpoint,72.0,°F
+3040500,analog-value,42,140W62nd - AHU-5 -   Preheat Setpoint,45.0,°F
+3040500,analog-value,45,140W62nd - AHU-5 -   Mixed Air Setpoint,97.0,°F
+3040500,analog-value,46,140W62nd - AHU-5 -   Economizer Command,0.0,%
+3040500,analog-value,47,140W62nd - AHU-5 -   Economizer Minimum Setpoint,10.0,%
+3040500,analog-value,60,140W62nd - AHU-5 -   Static Pressure Setpoint,1.1,inWC
+3040500,analog-value,61,140W62nd - AHU-5 -   Minimum VFD Setpoint,50.0,%
+3040500,analog-value,90,140W62nd - AHU-5 -   Allow Temporary Manual Control Time Limit,8.0,h
+3040500,analog-value,200,140W62nd - AHU-5 -   Fan Speed Offset,10.0,%
+3040500,analog-value,932,140W62nd - AHU-5 -   VAV Average Space Temperature,73.1571,°F
+3040500,analog-value,933,140W62nd - AHU-5 -   VAV WarmUp Target Temperature,68.2108,°F
+3040500,analog-value,934,140W62nd - AHU-5 -   VAV PreCool Target Temperature,68.2108,°F
+3040500,analog-value,936,140W62nd - AHU-5 -   VAV Global Occupied Setpoint,72.0,°F
+3040500,analog-value,937,140W62nd - AHU-5 -   VAV Global Min Setpoint,68.0,°F
+3040500,analog-value,938,140W62nd - AHU-5 -   VAV Global Max Setpoint,74.0,°F
+3040500,analog-value,940,140W62nd - AHU-5 -   VAV Global Ngt Clg Setpoint,72.0,°F
+3040500,analog-value,941,140W62nd - AHU-5 -   VAV Global Ngt Htg Setpoint,65.0,°F
+3040500,analog-value,942,140W62nd - AHU-5 -   VAV Global Cooling Offset,0.0,°F
+3040500,analog-value,943,140W62nd - AHU-5 -   VAV Global Heating Offset,2.0,°F
+3040500,analog-value,953,140W62nd - AHU-5 -   VAV Override Time Limit,0.0,h
+3040500,analog-value,954,140W62nd - AHU-5 -   VAV Override Time Left,0.0,min
+3040500,analog-value,955,140W62nd - AHU-5 -   VAVs in Night Call,0.0,
+3040500,analog-value,956,140W62nd - AHU-5 -   VAV Percentage of VAVs in Cooling,66.6667,%
+3040500,analog-value,957,140W62nd - AHU-5 -   VAV Percentage of VAVs in Heating,0.0,%
+3040500,analog-value,958,140W62nd - AHU-5 -   VAV Percentage of VAVs Open Greater than 90,0.0,%
+3040500,analog-value,959,140W62nd - AHU-5 -   VAV Percentage of VAVs Open Less than 50,100.0,%
+3040500,analog-value,960,140W62nd - AHU-5 -   VAVs in Demand Controlled Ventilation,0.0,
+3040500,analog-value,961,140W62nd - AHU-5 -   VAV Number of VAVs Open Greater than 80,0.0,
+3040500,analog-value,962,140W62nd - AHU-5 -   VAV Number of VAVs Open Greater than 95,0.0,
+3040500,analog-value,963,140W62nd - AHU-5 -   VAV Number of VAVs Open Less than 70,3.0,
+3040500,analog-value,964,140W62nd - AHU-5 -   VAV Number of VAVs Open Less than 90,3.0,
+3040500,analog-value,965,140W62nd - AHU-5 -   Number of VAVs (Total),26.0,
+3040500,analog-value,966,140W62nd - AHU-5 -   Number of VAVs (Communicating),3.0,
+3040500,analog-value,1001,140W62nd - AHU-5 -   Cooling Tower Make-up Water Meter Total Pulses,350825.0,
+3040500,analog-value,1002,140W62nd - Cooling Tower Make-up Water Meter Total Consumption,350825.0,gal (US)
+3040500,analog-value,1005,TEST,1.0,
+9999999,algo number,9999999,algo to choose forAHU_5,2.0,/
+9999999,logging,9999999,G36 satsp AHU_5,58.2,°F
+9999999,logging,9999999,CORE satsp AHU_5,57.5,°F
+9999999,trend,9999999,clg_coil_clo_temp_chg_AHU_5,2.0,°F
+9999999,hist,9999999,chw_coils_hist_AHU_5,1.0,/
+9999999,trend,9999999,rhv_clo_temp_chg_3-3,2.0,°F
+9999999,hist,9999999,rhv_coils_hist_3-3,0.0,/
+9999999,trend,9999999,rhv_clo_temp_chg_3-4,2.0,°F
+9999999,hist,9999999,rhv_coils_hist_3-4,0.0,/
+9999999,trend,9999999,rhv_clo_temp_chg_3-5,2.0,°F
+9999999,hist,9999999,rhv_coils_hist_3-5,0.0,/
