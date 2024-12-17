@@ -1,7 +1,6 @@
 import os, sys, time, shutil, re
 from datetime import datetime
 import numpy as np
-from pprint import pprint
 
 class Requests:
   """ This superclass calculates the number of requests
@@ -75,13 +74,10 @@ class Requests:
       print('Total importance-weighted requests: ' + str(self.R))
       if len(self.ignore):
         print('Ignored zones (user selected): ')
-        pprint(self.ignore)
       if len(self.missingEssential):   
         print('Ignored zones (due to missing essential data): ')
-        pprint(self.missingEssential)    
       if len(self.missingPartial):  
         print('Partial request results only (due to missing data, or a failed point): ')
-        pprint(self.missingPartial)
 
     return rv
 
@@ -166,8 +162,6 @@ class Pressure(Requests):
     for z in sorted(self.zd):
       if self.zd[z]['damper'] >= 95:
         print(str(z))
-        pprint(self.zd[z])
-
 
 class Temperature(Requests):
 
@@ -266,4 +260,3 @@ class Temperature(Requests):
       if 'cooling_loop' in self.zd[z]:
         if self.zd[z]['cooling_loop'] >= 95:
           print(str(z))
-          pprint(self.zd[z])
