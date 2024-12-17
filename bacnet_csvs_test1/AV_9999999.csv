@@ -1,0 +1,12 @@
+# device,objecttype,instance,Object_Name,Present_Value,Units
+9999999,analog-value,9999999,algo to choose forAHU_5,2,/
+9999999,analog-value,9999999,G36 satsp AHU_5,58.2,°F
+9999999,analog-value,9999999,CORE satsp AHU_5,57.5,°F
+9999999,analog-value,9999999,clg_coil_clo_temp_chg_AHU_5,2,°F
+9999999,analog-value,9999999,chw_coils_hist_AHU_5,1,/
+9999999,analog-value,9999999,rhv_clo_temp_chg_3-3,2,°F
+9999999,analog-value,9999999,rhv_coils_hist_3-3,0,/
+9999999,analog-value,9999999,rhv_clo_temp_chg_3-4,2,°F
+9999999,analog-value,9999999,rhv_coils_hist_3-4,0,/
+9999999,analog-value,9999999,rhv_clo_temp_chg_3-5,2,°F
+9999999,analog-value,9999999,rhv_coils_hist_3-5,0,/
