@@ -151,37 +151,48 @@ class CORE:
         
         # Chilled efficiency
         self.chw_eff = 0.8
-            
-        # if hist var not in AV_.csv
-        # check if clg coil hist exists 
-        if 'chw_coils_hist' not in ahu_data_AV['Object_Name']:
-            self.chw_coils_hist = 0
-        else:
-            self.chw_coils_hist = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'chw_coils_hist') >= 0][0]
-        # check if reheat coil hist exists for all vavs
-        self.rhv_coils_hist = {}
-        for vav in self.vavs:
-            if ('rhv_coils_hist' + vav) not in ahu_data_AV['Object_Name']:
-                self.rhv_coils_hist['rhv_coils_hist_' + vav] = 0
-            else:
-                self.rhv_coils_hist['rhv_coils_hist_' + vav] = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'rhv_coils_hist_'+vav) >= 0][0]
- 
+             
         # init estimations
+        self.rhv_coils_hist = {}
         self.estimations = {}
         
-        # update clg coil temp change when closed
-        if 'clg_coil_closed_temp_change' not in ahu_data_AV['Object_Name']:
-            self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = 2
-        else:
-            self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'clg_coil_closed_temp_change') >= 0][0]
+       # check if logging var in AV_9999999.csv
+        log_AV_csv = os.path.join(self.folder_dir, 'AV_9999999.csv')
         
-        # update reheat coil temp change when closed for all vavs (just for debugging purpose)
-        for vav in self.vavs:
-            if ('rhv_clo_temp_chg_' + vav) not in ahu_data_AV['Object_Name']:
-                self.estimations['rhv_clo_temp_chg_' + vav] = 2
+        if os.path.isfile(log_AV_csv):
+            log_data_AV = np.genfromtxt(log_AV_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')          
+            
+            # check if chw_coils_hist already exists
+            if ('chw_coils_hist_'+ ahu_name) not in log_data_AV['Object_Name']:
+                self.chw_coils_hist = 0
             else:
-                self.estimations['rhv_clo_temp_chg_' + vav] = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'rhv_clo_temp_chg_' + vav) >= 0][0]
-        
+                self.chw_coils_hist = log_data_AV['Present_Value'][np.char.find(log_data_AV['Object_Name'], 'chw_coils_hist_'+ ahu_name) >= 0][0]
+            
+            # check if clg_coil_clo_temp_chg already exists
+            if ('clg_coil_clo_temp_chg_'+self.ahu_name) not in log_data_AV['Object_Name']:
+                self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = 2
+            else:
+                self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = log_data_AV['Present_Value'][np.char.find(log_data_AV['Object_Name'], 'clg_coil_clo_temp_chg_'+ ahu_name) >= 0][0]
+
+            # if rhv_coils_hist already exists
+            for vav in self.vavs:
+                if ('rhv_coils_hist_' + vav) not in log_data_AV['Object_Name']:
+                    self.rhv_coils_hist['rhv_coils_hist_' + vav]= 0
+                    self.estimations['rhv_clo_temp_chg_' + vav] = 2
+                else:
+                    self.rhv_coils_hist['rhv_coils_hist_' + vav] = log_data_AV['Present_Value'][np.char.find(log_data_AV['Object_Name'], 'rhv_coils_hist_'+ vav) >= 0][0]
+                    self.estimations['rhv_clo_temp_chg_' + vav] = log_data_AV['Present_Value'][np.char.find(log_data_AV['Object_Name'], 'rhv_clo_temp_chg_'+ vav) >= 0][0]
+                      
+        else: 
+            # update clg coil hist and temp_change_when_closed
+            self.chw_coils_hist = 0
+            self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = 2
+            
+            # reheat coil hist exists for all vavs
+            for vav in self.vavs:
+                self.rhv_coils_hist['rhv_coils_hist_' + vav] = 0
+                self.estimations['rhv_clo_temp_chg_' + vav] = 2
+                     
         # Reheat (TO CHANGE)
         self.hw_price = 0.2
     
@@ -239,7 +250,8 @@ class CORE:
         # write CORE new sat setpoint if algo == 2
         elif self.algo == 2:
             new_ahu_data_AV['Present_Value'][idx_find] = new_core_sat
-            print(f'# CORE control used: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}')    
+            print(f'# CORE control used: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}')         
+        
         
         
         ###### 
@@ -267,16 +279,18 @@ class CORE:
                                     self.estimations['chw_coils_hist_' + self.ahu_name], '/')
         new_ahu_data_AV = self.log_data(new_clgcoil_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)
         
-        # vav reheat coil 
+        # vav reheat coil
         for vav in self.vavs:
             # reheat coil temp change 
             new_rhv_tempchg_data = ('9999999', 'trend', '9999999', 'rhv_clo_temp_chg_' + vav, self.estimations['rhv_clo_temp_chg_' + vav], '°F')                                                  
             new_ahu_data_AV = self.log_data(new_rhv_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)
             
             # reheat coil hist 
-            new_rhv_hist_data = ('9999999', 'hist', '9999999', 'rhv_coils_hist_' + vav, self.rhv_coils_hist['rhv_coils_hist_'+vav], '/')                                                                             
+            new_rhv_hist_data = ('9999999', 'hist', '9999999', 'rhv_coils_hist_' + vav, self.rhv_coils_hist['rhv_coils_hist_'+vav], '/')                                              
+            
             new_ahu_data_AV = self.log_data(new_rhv_hist_data, self.ahu_data_AV, new_ahu_data_AV)
         
+        # write to AV_.csv
         overwrite_csv = os.path.join(self.folder_dir, f'AV_{self.ahu_dev_ID}_out.csv')
         with open(overwrite_csv, "w", encoding='utf-8') as f:
             np.savetxt(f, new_ahu_data_AV, header=','.join(self.ahu_data_AV_header), delimiter=",", fmt='%s')
@@ -318,7 +332,7 @@ class CORE:
         self.estimations['fan_power_delta']   = np.zeros(num)
         self.estimations['diff_zone_tot_afr'] = np.zeros(num)
                 
-        # init total zone afr 
+        # init total zone airflow rate (afr)
         afr = 0
         
         # loop through each zone vav box
@@ -379,37 +393,33 @@ class CORE:
             self.ts_data.append(reheat_pos) # log 
             self.ts_header.append(vav +' reheat valve position') # log
             
-            if clg <= 100:
-                # calculate AFR difference under different SAT setpoints
-                diff_zone_afr = self.calc_diff_zone_afr(reheat_pos, cur_sat_sp, diff_sat, zone_afr, hg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
-                self.estimations['diff_zone_tot_afr'] += diff_zone_afr
-                new_zone_afr = zone_afr + diff_zone_afr
+            # calculate AFR difference under different SAT setpoints
+            diff_zone_afr = self.calc_diff_zone_afr(reheat_pos, cur_sat_sp, diff_sat, zone_afr, hg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
+            self.estimations['diff_zone_tot_afr'] += diff_zone_afr
+            new_zone_afr = zone_afr + diff_zone_afr
+            
+            # VAV boxes with reheat
+            # update coil temp change when closed
+            # and heat flow estimate
+            if reheat_pos == 0:
+                self.estimations['rhv_power_delta_' + vav] = np.zeros(len(diff_sat))
+                self.estimations['rhv_power_' + vav] = 0
+                self.ts_data += [0, 0, 0] # log
                 
-                # VAV boxes with reheat
-                # update coil temp change when closed
-                # and heat flow estimate
-                if reheat_pos == 0:
-                    self.estimations['rhv_power_delta_' + vav] = np.zeros(len(diff_sat))
-                    self.estimations['rhv_power_' + vav] = 0
-                    self.ts_data += [0, 0, 0] # log
-                    
-                    ### for debugging and tracking purposes only
-                    if self.rhv_coils_hist['rhv_coils_hist_'+vav] > 0:
-                        self.estimations['rhv_clo_temp_chg_' + vav] = ((zone_dat - self.cur_sat)*0.01) + (0.99*self.estimations['rhv_clo_temp_chg_' + vav])
-                         
-                else:
-                    self.estimations['rhv_power_delta_' + vav] = self.calc_heat_flow(new_zone_afr, -diff_sat)  
-                    self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
-                   
-                    ### for debugging and tracking purposes only
-                    delta_T = zone_dat - self.estimations['rhv_clo_temp_chg_' + vav] - (cur_sat_sp + diff_sat)
-                    diff_rhv_power = self.calc_heat_flow(new_zone_afr, delta_T)
-                    self.ts_data += np.concatenate([arr.flatten() for arr in diff_rhv_power]).tolist() # log 
-                
-                self.ts_header += [vav+' rhv power for lo SAT', vav+' rhv power for cur SAT', vav+' rhv power for ho SAT', ] # log
-
+                ### for debugging and tracking purposes only
+                if self.rhv_coils_hist['rhv_coils_hist_'+vav] > 0:
+                    self.estimations['rhv_clo_temp_chg_' + vav] = ((zone_dat - self.cur_sat)*0.01) + (0.99*self.estimations['rhv_clo_temp_chg_' + vav])
+                     
             else:
-                raise ValueError(f"airflow for {vav} is outside of range")                                 
+                self.estimations['rhv_power_delta_' + vav] = self.calc_heat_flow(new_zone_afr, -diff_sat)  
+                self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
+               
+                ### for debugging and tracking purposes only
+                delta_T = zone_dat - self.estimations['rhv_clo_temp_chg_' + vav] - (cur_sat_sp + diff_sat)
+                diff_rhv_power = self.calc_heat_flow(new_zone_afr, delta_T)
+                self.ts_data += np.concatenate([arr.flatten() for arr in diff_rhv_power]).tolist() # log 
+            
+            self.ts_header += [vav+' rhv power for lo SAT', vav+' rhv power for cur SAT', vav+' rhv power for hi SAT', ] # log                                  
                                              
         diff_afr = self.estimations['diff_zone_tot_afr']
         afr_ratio = (afr + diff_afr)/afr
@@ -421,23 +431,17 @@ class CORE:
         diff_fan_power = cur_power * (afr_ratio ** 2.5) # fan laws
         
         self.ts_data += np.concatenate([arr.flatten() for arr in diff_fan_power]).tolist() # log 
-        self.ts_header += ['fan power for lo SAT', 'fan power for cur SAT', ' fan power for ho SAT', ] # log
+        self.ts_header += ['fan power for lo SAT', 'fan power for cur SAT', ' fan power for hi SAT', ] # log
         
         fan_power_delta = diff_fan_power - cur_power
         
         self.estimations['fan_power_delta_' + self.ahu_name] = fan_power_delta
         self.estimations['fan_power_delta'] += fan_power_delta
-                
-        # get chw coils hist status
-        if not any('chw_coils_hist_'+self.ahu_name in item for item in self.ahu_data_AV['Object_Name']):
-            self.chw_coils_hist = 0
-        else:
-            idx_find = [np.char.find(self.ahu_data_AV['Object_Name'], 'chw_coils_hist_'+self.ahu_name)>=0][0]
-            self.chw_coils_hist = self.ahu_data_AV['Present_Value'][idx_find]
             
         # Chilled water temp change and power for each AHU under different SAT setpoints
         # estimate the inherent temperature change between in & out temperature    
-        if self.ccv == 0: # valve closed during look-back window
+        if self.ccv == 0: 
+            # valve closed during look-back window
             if self.chw_coils_hist > 0:
                 # update coil closed temp cahnge and return heat flow estimate of zero
                 self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] = ((self.cur_sat - self.mat)*0.01) + (0.99*self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name])
@@ -447,7 +451,7 @@ class CORE:
             self.estimations['chw_power_delta_' + self.ahu_name] = np.zeros(len(diff_sat))
             
             self.ts_data += [0, 0, 0] # log 
-            self.ts_header += [' chw power for lo SAT', ' chw power for cur SAT', ' chw power for ho SAT', ] # log
+            self.ts_header += [' chw power for lo SAT', ' chw power for cur SAT', ' chw power for hi SAT', ] # log
             
         else:
             # return heat flow estimate for each candidate sat
@@ -456,18 +460,16 @@ class CORE:
             curr_ahu_temp = cur_sat_sp - self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] - self.mat
             curr_chw_power = np.maximum(0.0, -self.calc_heat_flow(afr, curr_ahu_temp))
             
-            # diff sat setpoints   
             diff_ahu_temp = cur_sat_sp + diff_sat - self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] - self.mat
             
             # clg coil power
             diff_chw_power = np.maximum(0.0, -self.calc_heat_flow(afr + diff_afr, diff_ahu_temp))           
             self.ts_data += np.concatenate([arr.flatten() for arr in diff_chw_power]).tolist() # log 
-            self.ts_header += [' chw power for lo SAT', ' chw power for cur SAT', ' chw power for ho SAT', ] # log
+            self.ts_header += [' chw power for lo SAT', ' chw power for cur SAT', ' chw power for hi SAT', ] # log
             
             # update trend/hist values
             self.estimations['chw_coils_hist_' + self.ahu_name] = 1
             self.estimations['chw_power_delta'] = diff_chw_power - curr_chw_power
-            self.estimations['chw_power_' + self.ahu_name] = diff_chw_power - curr_chw_power                  
 
         self.estimations['diff_sat'] = diff_sat
     
@@ -494,6 +496,7 @@ class CORE:
         # CHECK REHEAT POS RANGE/VALUE 
         if (reheat_pos > 20) or (hg_sp <= room_temp <= clg_sp) or (clg < 0.1):
             diff_zone_afr = np.zeros(len(diff_sat)) 
+            
         # cooling
         else:
             afr = np.minimum(np.maximum(afr, afr_min), afr_max)
