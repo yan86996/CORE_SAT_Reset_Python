@@ -1,0 +1,4 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3001036,analog-input,1,VAVR-G-36 - Supply Air Temperature,-57.9429,°F
+3001036,analog-input,5,VAVR-G-36 - Airflow,824.668,CFM
+3001036,analog-input,101,Space Temperature,70.356,°F

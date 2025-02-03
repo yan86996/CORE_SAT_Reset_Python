@@ -1,0 +1,4 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3021009,analog-input,1,VAVR-2-9 - Supply Air Temperature,67.2177,°F
+3021009,analog-input,5,VAVR-2-9 - Airflow,605.667,CFM
+3021009,analog-input,101,Space Temperature,67.5417,°F

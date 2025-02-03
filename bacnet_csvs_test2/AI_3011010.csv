@@ -1,0 +1,3 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3011010,analog-input,5,VAV-1-10(CLG) - Airflow,1244.37,CFM
+3011010,analog-input,101,Space Temperature,71.0314,°F

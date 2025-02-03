@@ -1,0 +1,12 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3050000,analog-output,2,140W62nd - AHU-6 - Supply Fan 1 VFD Speed,100,%
+3050000,analog-output,3,140W62nd - AHU-6 - Supply Fan 2 VFD Speed,100,%
+3050000,analog-output,6,140W62nd - AHU-6 - Return Fan 1 (25) VFD Speed,100,%
+3050000,analog-output,7,140W62nd - AHU-6 - Return Fan 2 (26) VFD Speed,100,%
+3050000,analog-output,9,140W62nd - AHU-6 - Steam Coil 1 Control Valve,0,%
+3050000,analog-output,10,140W62nd - AHU-6 - Steam Coil 2 Control Valve,0,%
+3050000,analog-output,11,140W62nd - AHU-6 - Chilled Water Control Valve,0,%
+3050000,analog-output,13,140W62nd - AHU-6 - Outside Air Damper 1,41.6053,%
+3050000,analog-output,14,140W62nd - AHU-6 - Outside Air Damper 2,41.6053,%
+3050000,analog-output,15,140W62nd - AHU-6 - Return Air Damper,58.3947,%
+3050000,analog-output,16,140W62nd - AHU-6 - Spill Air Damper,41.6053,%

@@ -1,0 +1,5 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3001033,analog-input,1,VAV-G-33(CLG) - Supply Air Temperature,-57.4627,°F
+3001033,analog-input,3,SAC-3 (EMR G68) Space Temp,73.1274,°F
+3001033,analog-input,5,VAV-G-33(CLG) - Airflow,775.489,CFM
+3001033,analog-input,101,Space Temperature,71.3691,°F

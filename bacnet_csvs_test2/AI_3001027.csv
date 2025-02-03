@@ -1,0 +1,4 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3001027,analog-input,1,VAVR-G-27- Supply Air Temperature,70.9784,°F
+3001027,analog-input,5,VAVR-G-27- Airflow,554.654,CFM
+3001027,analog-input,101,Space Temperature,74.4085,°F

@@ -1,0 +1,4 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3001024,analog-input,1,VAV-G-24(CLG) -  Supply Air Temperature,-57.4627,°F
+3001024,analog-input,5,VAV-G-24(CLG) -  Airflow,90.2319,CFM
+3001024,analog-input,101,Space Temperature,70.6937,°F

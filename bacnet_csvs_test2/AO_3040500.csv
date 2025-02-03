@@ -1,0 +1,9 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3040500,analog-output,2,140W62nd - AHU-5 -  Supply Fan VFD Speed,74.6915,%
+3040500,analog-output,4,140W62nd - AHU-5 -  RF-5 VFD Speed,67.2223,%
+3040500,analog-output,5,140W62nd - AHU-5 -  Steam Coil 1 Control Valve,100,%
+3040500,analog-output,6,140W62nd - AHU-5 -  Steam Coil 2 Control Valve,100,%
+3040500,analog-output,7,140W62nd - AHU-5 -  Chilled Water Control Valve,0,%
+3040500,analog-output,9,140W62nd - AHU-5 -  Outside Air Damper,10,%
+3040500,analog-output,11,140W62nd - AHU-5 -  Return Air Damper,90,%
+3040500,analog-output,13,140W62nd - AHU-5 -  Spill Air Damper,10,%

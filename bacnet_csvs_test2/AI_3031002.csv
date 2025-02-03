@@ -1,0 +1,4 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3031002,analog-input,1,VAV-3-2(CLG) -  Supply Air Temperature,-58,°F
+3031002,analog-input,5,VAV-3-2(CLG) -  Airflow,1127.33,CFM
+3031002,analog-input,101,Space Temperature,70.2434,°F

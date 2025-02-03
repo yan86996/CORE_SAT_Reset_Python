@@ -1,0 +1,18 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3050000,analog-input,2,140W62nd - AHU-6 - Preheat Air Temperature,63.9158,°F
+3050000,analog-input,4,140W62nd - AHU-6 - Preheat Air Temperature 2,66.5345,°F
+3050000,analog-input,6,140W62nd - AHU-6 - Preheat Air Temperature 3,68.7806,°F
+3050000,analog-input,8,140W62nd - AHU-6 - Preheat Air Temperature 4,90.4307,°F
+3050000,analog-input,9,140W62nd - AHU-6 - Mixed Air Temperature,66.8987,°F
+3050000,analog-input,10,140W62nd - AHU-6 - Supply Air Temperature,67.3352,°F
+3050000,analog-input,11,140W62nd - AHU-6 - Supply Air Humidity,39.5299,%RH
+3050000,analog-input,12,140W62nd - AHU-6 - Supply Air CO2,554.696,ppm
+3050000,analog-input,13,140W62nd - AHU-6 - Duct Static Pressure,0.702076,inWC
+3050000,analog-input,102,140W62nd - AHU-6 - Return Air CO2,603.175,ppm
+3050000,analog-input,104,140W62nd - AHU-6 - Return Air Temperature,73.0569,°F
+3050000,analog-input,105,140W62nd - AHU-6 - Return Air Humidity,31.0745,%RH
+3050000,analog-input,106,140W62nd - AHU-6 - Outside Air Damper 1 Feedback,41.0867,%
+3050000,analog-input,107,140W62nd - AHU-6 - Outside Air Damper 2 Feedback,40.9951,%
+3050000,analog-input,108,140W62nd - AHU-6 - Return Air Damper Feedback,41.9109,%
+3050000,analog-input,109,140W62nd - AHU-6 - Spill Air Damper Feedback,41.6972,%
+3050000,analog-input,116,140W62nd - AHU-6 -  Mixed Air Humidity,37.3321,%RH
