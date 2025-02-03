@@ -5,19 +5,20 @@ import time
 from datetime import datetime
 import numpy as np
 import util_rate
+import pdb 
 # import zone_requests, reset
 
 class CORE:
     def __init__(self, algo=None, core_version=None, dehumid=None, folder_dir=None,  dehumd_limits=None, g36_sat=None, 
-                 vdf_dev_map=None, zone_names=None, ahu_name=None, zone_dev_map=None, flow=None, flow_min=None, flow_max=None, zone_requests=None, reset=None,          
-                 ahu_dev_map=None,num_ignore=None, diff_sat=None, important=None, SP0=None, SPtrim=None, SPres=None, SPres_max=None,                    
+                 zone_dev_map=None, vdf_dev_map=None, ahu_dev_map=None, pump_dev_map=None, 
+                 zone_names=None, ahu_name=None, flow=None, flow_min=None, flow_max=None, zone_requests=None, reset=None,          
+                 num_ignore=None, diff_sat=None, important=None, SP0=None, SPtrim=None, SPres=None, SPres_max=None,                    
                  ):
         self.algo = algo
         self.core_version = core_version
         self.dehumid = dehumid
         self.g36_sat = g36_sat
         self.folder_dir = folder_dir
-        self.SP0 = SP0 # default setpoint if control algo doesn't work
         
         # log data2save for each timestamp
         self.ts_data = []
@@ -57,7 +58,12 @@ class CORE:
         self.ahu_dev_ID = ahu_dev_ID
         
         # from AV_XXXX.csv
-        ahu_csv_AV = os.path.join(self.folder_dir, f'AV_{ahu_dev_ID}.csv')
+        try:
+            ahu_csv_AV = os.path.join(self.folder_dir, f'AV_{ahu_dev_ID}.csv')
+        except Exception as e:
+            print(e)
+            print(f'Failed to find AV_{ahu_dev_ID}.csv') 
+        
         ahu_data_AV = np.genfromtxt(ahu_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
         self.ahu_data_AV = ahu_data_AV
         self.ahu_data_AV_header = ahu_data_AV.dtype.names
@@ -83,28 +89,43 @@ class CORE:
         self.ts_header.append('calculated outdoor air dewpoint') # log  
 
         # from AI_XXXX.csv
-        ahu_csv_AI = os.path.join(self.folder_dir, f'AI_{ahu_dev_ID}.csv')
-        ahu_data_AI = np.genfromtxt(ahu_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8')
-        
-        # cur sat
-        self.cur_sat = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Supply Air Temperature') >= 0][0]       
-        self.ts_data.append(self.cur_sat) # log
-        self.ts_header.append('current SAT') # log
-              
-        # mat
-        self.mat = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Mixed Air Temperature') >= 0][0]
-        self.ts_data.append(self.mat) # log 
-        self.ts_header.append('current MAT') # log
-        
-        # supply air RH
-        sa_rh = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Supply Air Humidity') >= 0][0]       
-        self.ts_data.append(sa_rh) # log 
-        self.ts_header.append('supply air RH') # log
+        try:
+            ahu_csv_AI = os.path.join(self.folder_dir, f'AI_{ahu_dev_ID}.csv')
+            ahu_data_AI = np.genfromtxt(ahu_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8')
+            
+            # cur sat
+            self.cur_sat = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Supply Air Temperature') >= 0][0] 
+            self.ts_data.append(self.cur_sat) # log
+            self.ts_header.append('current SAT') # log
+                  
+            # mat
+            self.mat = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Mixed Air Temperature') >= 0][0]
+            self.ts_data.append(self.mat) # log 
+            self.ts_header.append('current MAT') # log
+            
+            # supply air RH
+            sa_rh = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Supply Air Humidity') >= 0][0]       
+            self.ts_data.append(sa_rh) # log 
+            self.ts_header.append('supply air RH') # log
+            
+            # mixed air RH
+            ma_rh = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Mixed Air Humidity') >= 0][0]       
+            self.ts_data.append(ma_rh) # log 
+            self.ts_header.append('mixed air RH') # log
+            
+        except Exception as e:
+            print(e)
+            print(f'Failed to find AI_{ahu_dev_ID}.csv')
         
         # from AO_XXXX.csv
-        # clg coil valve 
-        ahu_csv_AO = os.path.join(self.folder_dir, f'AO_{ahu_dev_ID}.csv')
-        ahu_data_AO = np.genfromtxt(ahu_csv_AO, delimiter=',', dtype=None, names=True, encoding='utf-8')
+        # clg coil valve
+        try:
+            ahu_csv_AO = os.path.join(self.folder_dir, f'AO_{ahu_dev_ID}.csv')
+            ahu_data_AO = np.genfromtxt(ahu_csv_AO, delimiter=',', dtype=None, names=True, encoding='utf-8')
+        except Exception as e:
+            print(e)
+            print(f'Failed to find AO_{ahu_dev_ID}.csv')
+        
         self.ccv = ahu_data_AO['Present_Value'][np.char.find(ahu_data_AO['Object_Name'], 'Chilled Water Control Valve') >= 0][0]
         self.ts_data.append(self.ccv) # log 
         self.ts_header.append('chilled water control valve') # log
@@ -130,34 +151,41 @@ class CORE:
         for key, value in vfd_dev_ID.items():
             # get supply fan(s)
             if 'SF' in key.upper():
-                sf_csv_AV = os.path.join(self.folder_dir, f'AV_{value}.csv')
+                try:
+                    sf_csv_AV = os.path.join(self.folder_dir, f'AV_{value}.csv')                
+                except Exception as e:
+                    print(e)
+                    print(f'Failed to find AV_{value}.csv')
+                    
                 sf_data_AV = np.genfromtxt(sf_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
                 sf_power = sf_data_AV['Present_Value'][np.char.find(sf_data_AV['Object_Name'], 'POWER') >= 0][0]
                 vfd_sf_power += sf_power
                 self.ts_data.append(sf_power) # log 
-                self.ts_header.append(key + ' power ' + ahu_name) # log
+                self.ts_header.append(key + ' power(kW) ' + ahu_name) # log
             
             # get return fan(s)
-            if 'RF' in key.upper():                 
-                rf_csv_AV = os.path.join(self.folder_dir, f'AV_{value}.csv') 
+            if 'RF' in key.upper():
+                try:
+                    rf_csv_AV = os.path.join(self.folder_dir, f'AV_{value}.csv') 
+                except Exception as e:
+                    print(e)
+                    print(f'Failed to find AV_{value}.csv')
+                    
                 rf_data_AV = np.genfromtxt(rf_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
                 rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], 'POWER') >= 0][0]
                 vfd_rf_power += rf_power
                 self.ts_data.append(rf_power) # log 
-                self.ts_header.append(key + ' power '+ ahu_name) # log
+                self.ts_header.append(key + ' power(kW) '+ ahu_name) # log
                 
         self.vfd_sf_power = vfd_sf_power  # KW
         self.vfd_rf_power = vfd_rf_power  # KW
-        
-        # Chilled efficiency
-        self.chw_eff = 0.8
              
         # init estimations
         self.rhv_coils_hist = {}
         self.estimations = {}
         
-       # check if logging var in AV_9999999.csv
-        log_AV_csv = os.path.join(self.folder_dir, 'AV_9999999.csv')
+       # check if logging var in AV_3050090.csv
+        log_AV_csv = os.path.join(self.folder_dir, 'AV_3050090.csv')
         
         if os.path.isfile(log_AV_csv):
             log_data_AV = np.genfromtxt(log_AV_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')          
@@ -192,10 +220,17 @@ class CORE:
             for vav in self.vavs:
                 self.rhv_coils_hist['rhv_coils_hist_' + vav] = 0
                 self.estimations['rhv_clo_temp_chg_' + vav] = 2
-                     
-        # Reheat (TO CHANGE)
-        self.hw_price = 0.2
-    
+            
+        # pump power 
+        for key, value in pump_dev_map.items():
+            pump_csv = os.path.join(self.folder_dir, f'AV_{value}.csv')
+            
+            pump_data_AV = np.genfromtxt(pump_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
+            pump_power = pump_data_AV['Present_Value'][np.char.find(pump_data_AV['Object_Name'], 'POWER') >= 0][0]
+            
+            self.ts_data.append(pump_power) # log 
+            self.ts_header.append(key + ' power(kW)') # log
+            
     def get_new_satsp(self):
         # calculate the feasible range of diff_sat
         candidate_sat = self.diff_sat + self.cur_satsp
@@ -205,36 +240,57 @@ class CORE:
             humd_SPmax = self.calc_sp_limit(self.cur_oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)              
             self.max_sat_sp = min(self.max_sat_sp, humd_SPmax)
             self.reset.SPmax = self.max_sat_sp
-            
-        # sat setpoint range check
-        candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
-        candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)  
-        diff_sat = candidate_sat - self.cur_satsp
-        
-        # estimate power consumption values under different setpoints    
-        self.estimate_power(self.cur_satsp, diff_sat)
-        
-        # estimate costs under different setpoints
-        datetime_obj = datetime.fromtimestamp(int(time.time()))
-        elec_price   = util_rate.price(datetime_obj, 2)
-        self.estimations['chw_cost_delta'] = elec_price    * self.estimations['chw_power_delta'] / self.chw_eff
-        self.estimations['rhv_cost_delta'] = self.hw_price * self.estimations['rhv_power_delta']
-        self.estimations['fan_cost_delta'] = elec_price    * self.estimations['fan_power_delta']
-        self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']
-        
-        idx_opt = np.argmin(self.estimations['tot_cost_delta'])
-        
+                    
         # new sat setpoint
         if self.requests.R > self.num_ignore:
             # comfort constraint present
             # use trim and respond without outside air based SAT setpoint limits
             new_core_sat = self.reset.get_new_setpoint(self.requests.R, self.cur_sat)
+            
         else:
-            # no comfort constraint present
-            new_core_sat = self.cur_satsp + diff_sat[idx_opt]
-        
+            try:
+                # sat setpoint range check
+                candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
+                candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)  
+                diff_sat = candidate_sat - self.cur_satsp
+                
+                # estimate power consumption values under different setpoints    
+                self.estimate_power(self.cur_satsp, diff_sat)
+                
+                # TO CHANGE
+                elec_price = 0.2 # util_rate.price(datetime_obj, 2)
+                
+                self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 * 18 * (51.972/1000) # steam (950 BTU/lb); 0.7 COP = 18 lbs/ ton of clg
+                self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 / 950 * (51.972/1000)
+                self.estimations['fan_cost_delta'] = elec_price * self.estimations['fan_power_delta']
+                self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']
+                
+                idx_opt = np.argmin(self.estimations['tot_cost_delta'])
+                
+                # no comfort constraint present
+                new_core_sat = self.cur_satsp + diff_sat[idx_opt]
+                
+                core_finish = 1
+            
+            except Exception as e:
+                print(e)
+                new_core_sat = np.nan
+                core_finish = 0
+            
         self.ts_data.append(new_core_sat) # log 
         self.ts_header.append('new CORE SAT setpoint') # log
+        
+        self.ts_data.append(core_finish) # log 
+        self.ts_header.append('core finished') # log
+        
+        # G36 algo finished
+        if self.g36_sat == np.nan:
+            g36_finish = 0
+        else:
+            g36_finish = 1
+      
+        self.ts_data.append(g36_finish) # log 
+        self.ts_header.append('g36 finished') # log
         
         ###
         ## write SAT setpoint back 
@@ -244,57 +300,70 @@ class CORE:
         
         # write G36 new sat setpoint if algo == 1
         if self.algo == 1:
+            algo_finish = g36_finish
             new_ahu_data_AV['Present_Value'][idx_find] = self.g36_sat
-            print(f'# G36 control used: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}')    
+            print(f'# G36 control used: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}')
 
         # write CORE new sat setpoint if algo == 2
         elif self.algo == 2:
+            algo_finish = core_finish
             new_ahu_data_AV['Present_Value'][idx_find] = new_core_sat
             print(f'# CORE control used: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}')         
         
-        
-        
+        # default ctrl used 
+        else:
+            algo_finish = np.nan
+            
         ###### 
         ### logging data points including trending variables
         ###### 
         # algo num
-        algo_array = ('9999999', 'algo number', '9999999', 'algo to choose for' + self.ahu_name, self.algo,'/')
-        new_ahu_data_AV = self.log_data(algo_array, self.ahu_data_AV, new_ahu_data_AV) 
+        algo_array = ('3050090', 'analog-value', '9999999', 'algo to choose for ' + self.ahu_name, self.algo,'/')
+        new_ahu_data_AV = self.log_data(algo_array, self.ahu_data_AV, new_ahu_data_AV)
+        
+        self.ts_data.append(self.algo) # log 
+        self.ts_header.append('algo number') # log
+        
+        # CORE/G36 finished
+        algo_finish_array = ('3050090', 'analog-value', '9999999', 'picked algo finished for ' + self.ahu_name, algo_finish,'/')
+        new_ahu_data_AV = self.log_data(algo_finish_array, self.ahu_data_AV, new_ahu_data_AV)
+        
+        self.ts_data.append(algo_finish) # log 
+        self.ts_header.append('picked algo finished') # log
         
         # G36 SAT setpoint
-        g36_satsp_array = ('9999999', 'logging', '9999999', 'G36 satsp ' + self.ahu_name, self.g36_sat,'°F')
-        new_ahu_data_AV = self.log_data(g36_satsp_array, self.ahu_data_AV, new_ahu_data_AV) 
+        g36_satsp_array = ('3050090', 'analog-value', '9999999', 'G36 satsp ' + self.ahu_name, self.g36_sat,'°F')
+        new_ahu_data_AV = self.log_data(g36_satsp_array, self.ahu_data_AV, new_ahu_data_AV)
         
         # CORE SAT setpoint
-        core_satsp_array = ('9999999', 'logging', '9999999', 'CORE satsp ' + self.ahu_name, new_core_sat,'°F')
-        new_ahu_data_AV = self.log_data(core_satsp_array, self.ahu_data_AV, new_ahu_data_AV) 
+        core_satsp_array = ('3050090', 'analog-value', '9999999', 'CORE satsp ' + self.ahu_name, new_core_sat,'°F')
+        new_ahu_data_AV = self.log_data(core_satsp_array, self.ahu_data_AV, new_ahu_data_AV)
         
         # AHU clg coil temp change 
-        new_clgcoil_tempchg_data = ('9999999', 'trend', '9999999', 'clg_coil_clo_temp_chg_' + self.ahu_name, 
+        new_clgcoil_tempchg_data = ('3050090', 'analog-value', '9999999', 'clg_coil_clo_temp_chg_' + self.ahu_name, 
                                     self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name], '°F')
         new_ahu_data_AV = self.log_data(new_clgcoil_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)
         
         # AHU clg coil hist
-        new_clgcoil_tempchg_data = ('9999999', 'hist', '9999999', 'chw_coils_hist_' + self.ahu_name, 
+        new_clgcoil_tempchg_data = ('3050090', 'analog-value', '9999999', 'chw_coils_hist_' + self.ahu_name, 
                                     self.estimations['chw_coils_hist_' + self.ahu_name], '/')
         new_ahu_data_AV = self.log_data(new_clgcoil_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)
         
         # vav reheat coil
         for vav in self.vavs:
-            # reheat coil temp change 
-            new_rhv_tempchg_data = ('9999999', 'trend', '9999999', 'rhv_clo_temp_chg_' + vav, self.estimations['rhv_clo_temp_chg_' + vav], '°F')                                                  
+            # reheat coil temp change
+            new_rhv_tempchg_data = ('3050090', 'analog-value', '9999999', 'rhv_clo_temp_chg_' + vav, self.estimations['rhv_clo_temp_chg_' + vav], '°F')                                             
             new_ahu_data_AV = self.log_data(new_rhv_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)
             
-            # reheat coil hist 
-            new_rhv_hist_data = ('9999999', 'hist', '9999999', 'rhv_coils_hist_' + vav, self.rhv_coils_hist['rhv_coils_hist_'+vav], '/')                                              
-            
+            # reheat coil hist
+            new_rhv_hist_data = ('3050090', 'analog-value', '9999999', 'rhv_coils_hist_' + vav, self.rhv_coils_hist['rhv_coils_hist_'+vav], '/')                  
             new_ahu_data_AV = self.log_data(new_rhv_hist_data, self.ahu_data_AV, new_ahu_data_AV)
         
         # write to AV_.csv
         overwrite_csv = os.path.join(self.folder_dir, f'AV_{self.ahu_dev_ID}_out.csv')
         with open(overwrite_csv, "w", encoding='utf-8') as f:
             np.savetxt(f, new_ahu_data_AV, header=','.join(self.ahu_data_AV_header), delimiter=",", fmt='%s')
-             
+        
         ###
         ## save time-series vars on a daily basis
         ###
@@ -303,10 +372,10 @@ class CORE:
                          self.estimations['rhv_cost_delta'], self.estimations['fan_cost_delta'], self.estimations['diff_zone_tot_afr']]
         
         core_cal_list = np.concatenate([arr.flatten() for arr in core_cal_list]).tolist() 
-        core_cal_list = [self.algo, self.g36_sat, new_core_sat,
+        core_cal_list = [self.g36_sat, new_core_sat,
                          self.core_version, self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name], self.chw_coils_hist] + core_cal_list   
         
-        core_cal_header = ['algo_num', 'G36 satsp '+self.ahu_name, 'CORE satsp '+self.ahu_name,
+        core_cal_header = ['G36 satsp '+self.ahu_name, 'CORE satsp '+self.ahu_name,
                            'core_version',   ' clg_coil_clo_temp_chg_'+self.ahu_name, 'chw_coils_hist_'+self.ahu_name,  
                            'candidate_sat_lo',     'candidate_sat',     'candidate_sat_hi', 
                            'tot_cost_delta_lo',    'tot_cost_delta',    'tot_cost_delta_hi',
@@ -314,7 +383,7 @@ class CORE:
                            'rhv_cost_delta_lo',    'rhv_cost_delta',    'rhv_cost_delta_hi',
                            'fan_cost_delta_lo',    'fan_cost_delta',    'fan_cost_delta_hi',
                            'diff_zone_tot_afr_lo', 'diff_zone_tot_afr', 'diff_zone_tot_afr_hi',
-                           ]
+                          ]
 
         # combine all vars to save 
         data2save = core_cal_list + self.ts_data
@@ -340,11 +409,20 @@ class CORE:
             div_ID = self.zone_dev_map[vav]
                         
             # from AI_XXXX.csv
-            zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
-            zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
+            try:
+                zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
+            except Exception as e:
+                print(e)
+                print(f'Failed to find AI_{div_ID}.csv') 
             
+            zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8')
+
             # discharge air temperature
-            zone_dat = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], 'Supply Air Temperature') >= 0][0]
+            if any(np.char.find(zone_data_AI['Object_Name'], 'Supply Air Temperature') >= 0) :
+                zone_dat = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], 'Supply Air Temperature') >= 0][0]
+            else:
+                zone_dat = self.cur_sat
+                
             self.ts_data.append(zone_dat) # log
             self.ts_header.append(vav +' DAT') # log
             
@@ -357,11 +435,20 @@ class CORE:
             afr += zone_afr       
             
             # from AV_XXXX.csv
-            zone_csv_AV = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
-            zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')          
-
+            try:
+                zone_csv_AV = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+            except Exception as e:
+                print(e)
+                print(f'Failed to find AV_{div_ID}.csv') 
+            
             # min airflow
-            afr_min = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_min) >= 0][0]
+            try:
+                zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
+                afr_min = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_min)>= 0][0]
+            except Exception as e:
+                print(e)
+                print(f'Failed to AV_{div_ID}.csv or min airflow data')
+                
             self.ts_data.append(afr_min) # log 
             self.ts_header.append(vav +' min air flow rate') # log       
             
@@ -475,6 +562,7 @@ class CORE:
     
     def log_data(self, newdata, ahu_data_AV, new_ahu_data_AV):
         var_in_csv = newdata[3]
+        
         if not any(var_in_csv in item for item in ahu_data_AV['Object_Name']):
             new_nparry = np.array([newdata], dtype=new_ahu_data_AV.dtype)                                                         
             new_ahu_data_AV = np.append(new_ahu_data_AV, new_nparry)
@@ -486,16 +574,15 @@ class CORE:
         return new_ahu_data_AV
         
     def calc_heat_flow(self, volumetric_flow,delta_temperature):
-        rho = 1.2005 # density of air @ 20degC [Unit: kg/m^3]
-        c = 1005 # specific heat capacity of air @ 20degC 
-        return volumetric_flow * delta_temperature * c * rho / 1.8 / 2118.88 / 1000  # [Unit: kW] 
+        # CFM * delta_fahrenheit * 1.08
+        return volumetric_flow * delta_temperature * 1.08  # [Unit: BTU/hr]
     
     # get new air flow rate for different SATs
     def calc_diff_zone_afr(self, reheat_pos, cur_sat, diff_sat, afr, hg_sp, clg_sp, room_temp, afr_min, afr_max, clg):      
         # heating or deadband
-        # CHECK REHEAT POS RANGE/VALUE 
+        # CHECK REHEAT POS RANGE/VALUE
         if (reheat_pos > 20) or (hg_sp <= room_temp <= clg_sp) or (clg < 0.1):
-            diff_zone_afr = np.zeros(len(diff_sat)) 
+            diff_zone_afr = np.zeros(len(diff_sat))
             
         # cooling
         else:
@@ -508,7 +595,7 @@ class CORE:
             if 0.1 < clg < 99.9:
                 diff_zone_afr = new_zone_afr - afr
                 
-            elif 99.9 <= clg <= 100:
+            else:
                 if room_temp > clg_sp:
                     # zone way past capacity, afr will not change regardless of sat
                     diff_zone_afr = np.zeros(len(diff_sat))
@@ -523,7 +610,7 @@ class CORE:
             print('cur_sat=%s, diff_sat=%s, afr=%s, cur_temp_sp=%s, room_temp=%s, afr_min=%s, afr_max=%s, clg=%s'%(cur_sat, diff_sat, afr, clg_sp, room_temp, afr_min, afr_max, clg))
             diff_zone_afr = np.zeros(len(diff_sat))
         
-        return diff_zone_afr  
+        return diff_zone_afr
     
     def save_data_bydate(self, data2save, header, folder_dir, ahu_name):
         # get the current date to name the file
@@ -561,7 +648,7 @@ class CORE:
         return T_dew_F
     
     def calc_sp_limit(self, current_oat, lo_oat, hi_oat, val_at_lo_oat, val_at_hi_oat):
-      # calculate the 
+      # calculate the sat sp 
       if current_oat <=lo_oat:        
         rv = val_at_lo_oat
       elif current_oat >= hi_oat:
@@ -570,6 +657,6 @@ class CORE:
         # linearly interpolate
         val_range = val_at_hi_oat-val_at_lo_oat
         oat_range = hi_oat-lo_oat
-        rv = val_at_lo_oat +  val_range *(current_oat-lo_oat)/oat_range
+        rv = val_at_lo_oat +  val_range * (current_oat-lo_oat)/ oat_range
         
-      return rv      
+      return rv
