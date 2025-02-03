@@ -2,25 +2,28 @@ if __name__=='__main__':
     import os, sys
     import time
     from datetime import datetime, date
+    import pdb 
     # set the working directory to be where this script is located
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     os.chdir(script_dir)
     
-    # load custom modules
+    ###
+    ## load custom modules
+    ###
     import reset
     import zone_requests
     from g36 import G36
     from core_v0 import CORE
-    # loading the mapping dictionary from the file
+    
+    ###
+    ## loading the mapping dictionary processed data
+    ###
     from mapping_data import *
     from rand_dates import *
     
     # initialization
-    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test1'))
-    zones_5, zones_6, zones_7 = ['3-3', '3-4', '3-5'], ['3-22', '3-23', '3-24'], ['3-1', '3-2', '3-8', '3-9', '3-10']
-    ahu_5, ahu_6, ahu_7 = 'AHU_5', 'AHU_6', 'AHU_7'
-    zones_and_ahus = [(zones_5, ahu_5), (zones_6, ahu_6), (zones_7, ahu_7)]
-
+    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test2'))
+    
     damper = 'Damper Position'
     flow = 'Airflow'
     flow_min = 'Minimum Airflow Setpoint'
@@ -29,8 +32,10 @@ if __name__=='__main__':
     clg_setpoint = 'Cooling Setpoint'
     core_version = 'v0'
 
-    # trim and response rates (F)
-    num_ignore = 2
+    # trim and respond logic params
+    # AHU5:26 zones, AHU6:42 zones, AHU7: 58 zones
+    num_ignore_ahu5, num_ignore_ahu6, num_ignore_ahu7 = 3, 5, 6
+    
     sp_default = 58 # default setpoint if control algo doesn't work
     sp_trim = 0.2
     sp_res  = -0.3
@@ -38,7 +43,7 @@ if __name__=='__main__':
     sat_min = 55 
     sat_max = 65
                 
-    # pick algorithm 
+    # pick algorithm
     if date.today() in rand_dates_Baseline:
         algo = 0 # baseline
     elif date.today() in rand_dates_G36:
@@ -47,9 +52,12 @@ if __name__=='__main__':
         algo = 2 # CORE      
     else:
         raise ValueError("Today is not in any of the rand rates")
-
     
-    for zones, ahu in [(zones_5, ahu_5)]:
+    # zone list (zones_5, zones_6, zones_7) extracted by extract_dev_ID.py
+    zones_and_ahus = [(zones_5, 'AHU_5', num_ignore_ahu5), (zones_6, 'AHU_6', num_ignore_ahu6), (zones_7, 'AHU_7', num_ignore_ahu7)]
+
+    for zones, ahu, num_ignore in zones_and_ahus:
+                
         # instantiate temp requests objects
         temperature_requests = zone_requests.Temperature(verbose=False, folder_dir = folder_dir, zone_dev_map = devID_zoneID, zone_names=zones,                                                 
                                                          flow=flow, flow_min=flow_min, flow_max=flow_max, clg_setpoint=clg_setpoint,
@@ -80,7 +88,7 @@ if __name__=='__main__':
         g36_sat = g36_control.get_new_satsp()
         # g36_sat = g36_control.get_new_satsp_humd(55, 60, 65, 58)
         
-        ###    
+        ###
         ## CORE control
         ###
         diff_sat = [-0.5, 0, 0.5]
@@ -88,11 +96,39 @@ if __name__=='__main__':
         dehumd_limits = (55, 60, 65, 58)
         dehumid = True
         
-        core_control = CORE(algo=algo, core_version=core_version, dehumid=dehumid, dehumd_limits=dehumd_limits, g36_sat=g36_sat, 
-                            folder_dir=folder_dir, zone_names=zones,  ahu_name=ahu, zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID,
+        core_control = CORE(algo=algo, core_version=core_version, dehumid=dehumid, dehumd_limits=dehumd_limits, g36_sat=g36_sat, folder_dir=folder_dir, zone_names=zones, ahu_name=ahu,        
+                            zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID, pump_dev_map=devID_pumpID,
                             flow=flow, flow_min=flow_min, flow_max=flow_max, zone_requests=temperature_requests, reset=temperature_reset, 
                             ahu_dev_map=devID_ahuID, num_ignore=num_ignore, diff_sat=diff_sat, SP0=sp_default, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max,                    
                             )
-      
+        
         core_sat = core_control.get_new_satsp()
+        
+        if algo == 0:
+            print('# Baseline control used')
+            
+    # move algo values into AV_3050090.csv
+    filtered_rows  = []
+    for _, value in devID_ahuID.items():
+        out_csv = os.path.join(folder_dir, f'AV_{value}_out.csv')
+        data = np.genfromtxt(out_csv, delimiter=',', dtype=str, encoding='utf-8')
+        
+        # Extract rows where the "instance" column contains '99999'
+        rows = data[data[:, 2] == '9999999', :]
+        if rows.size > 0:
+            filtered_rows.append(rows)
+                
+    # Combine filtered data with the header
+    if filtered_rows:
+        header = ('# device', 'objecttype', 'instance', 'Object_Name', 'Present_Value', 'Units')
+        filtered_data = np.vstack([header] + filtered_rows)
+    
+        # Save to a new CSV file
+        output_path =  os.path.join(folder_dir, 'AV_3050090_out.csv')
+        np.savetxt(output_path, filtered_data, delimiter=",", fmt="%s")
+    
+        # Provide the file for download
+        output_path
+    else:
+        output_path = "No matching rows found."
         
