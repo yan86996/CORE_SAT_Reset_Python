@@ -109,20 +109,25 @@ if __name__=='__main__':
             
     # move algo values into AV_3050090.csv
     filtered_rows  = []
+    
     for _, value in devID_ahuID.items():
         out_csv = os.path.join(folder_dir, f'AV_{value}_out.csv')
         data = np.genfromtxt(out_csv, delimiter=',', dtype=str, encoding='utf-8')
         
         # Extract rows where the "instance" column contains '99999'
         rows = data[data[:, 2] == '9999999', :]
+                        
         if rows.size > 0:
             filtered_rows.append(rows)
-                
+    
     # Combine filtered data with the header
     if filtered_rows:
         header = ('# device', 'objecttype', 'instance', 'Object_Name', 'Present_Value', 'Units')
         filtered_data = np.vstack([header] + filtered_rows)
-    
+        
+        filtered_data[1:, 2] = np.arange(10001, 10001 + len(filtered_data) -1)
+        filtered_data[filtered_data == '/'] = ''
+        
         # Save to a new CSV file
         output_path =  os.path.join(folder_dir, 'AV_3050090_out.csv')
         np.savetxt(output_path, filtered_data, delimiter=",", fmt="%s")
