@@ -1,0 +1,23 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3001001,analog-value,101,140W62nd - Generator - A-B Line to Line Voltage,0,V
+3001001,analog-value,102,140W62nd - Generator - B-C Line to Line Voltage,0,V
+3001001,analog-value,103,140W62nd - Generator - C-A Line to Line Voltage,0,V
+3001001,analog-value,111,140W62nd - Generator - Phase A current,0,A
+3001001,analog-value,112,140W62nd - Generator - Phase B current,0,A
+3001001,analog-value,113,140W62nd - Generator - Phase C current,0,A
+3001001,analog-value,131,140W62nd - Generator - Total kVA,0,kVA
+3001001,analog-value,141,140W62nd - Generator - Total Power,0,kW
+3001001,analog-value,151,140W62nd - Generator - Engine Load,0,%
+3001001,analog-value,152,140W62nd - Generator - Battery Voltage,26.7,V
+3001001,analog-value,153,140W62nd - Generator - Fuel Level,48,%
+3001001,analog-value,154,140W62nd - Generator - Low Fuel Level Alarm Threshold,2,%
+3001001,analog-value,155,140W62nd - Generator - Low Fuel Level Pre-Alarm Threshold,33,%
+3001001,analog-value,201,Lowentein Steam Mass Flow,3093.84,lb/h
+3001001,analog-value,202,Lowentein Steam Pressure,137.762,psi
+3001001,analog-value,203,Lowentein Total Steam Usage,55525.2,lb
+3001001,analog-value,204,Lowentein Grand Total Steam Usage,56750.9,lb
+3001001,analog-value,205,Lowentein Steam Volume Flow,9451.41,cu ft/s
+3001001,analog-value,206,Lowentein Steam Meter Alarm Point-1,3600,cu ft/s
+3001001,analog-value,207,Lowentein Steam Meter Alarm Point-2,3600,m²
+3001001,analog-value,208,Lowentein Steam Meter Alarm Point-3,0,m²
+3001001,analog-value,209,140W62nd - Generator - Fuel Left,480,gal (US)

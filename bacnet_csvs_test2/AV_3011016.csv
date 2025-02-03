@@ -1,0 +1,39 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3011016,analog-value,1,140W62nd VAV-1-16(CLG) - Space Temperature (From Master),71.4817,°F
+3011016,analog-value,2,AHU Supply Temperature (From Master),66.8407,°F
+3011016,analog-value,3,Outside Air Temperature (From Master),46.8072,°F
+3011016,analog-value,10,Airflow Setpoint,1000,CFM
+3011016,analog-value,11,Maximum Airflow Setpoint,2000,CFM
+3011016,analog-value,12,Minimum Airflow Setpoint,1000,CFM
+3011016,analog-value,13,Reheat Airflow Setpoint,235,CFM
+3011016,analog-value,20,Occupied Setpoint (From Master),72,°F
+3011016,analog-value,21,Temperature Deadband,0,°F
+3011016,analog-value,22,Cooling Setpoint,72,°F
+3011016,analog-value,23,Heating Setpoint,70,°F
+3011016,analog-value,24,Unoccupied Cooling Setpoint (From Master),75,°F
+3011016,analog-value,25,Unoccupied Heating Setpoint (From Master),65,°F
+3011016,analog-value,26,Minimum Setpoint (From Master),69,°F
+3011016,analog-value,27,Maximum Setpoint (From Master),75,°F
+3011016,analog-value,28,Cooling Offset (From Master),0,°F
+3011016,analog-value,29,Heating Offset (From Master),2,°F
+3011016,analog-value,30,Override Time Limit,2,h
+3011016,analog-value,31,Override Time Remaining,0,h
+3011016,analog-value,40,Box Size,10,in
+3011016,analog-value,41,KFactor,1353,
+3011016,analog-value,42,Zero Calibration Factor,410,
+3011016,analog-value,43,Damper Position,78.8888,%
+3011016,analog-value,44,Balancing Coefficient,1.3,
+3011016,analog-value,45,Reheat Valve Position,0,%
+3011016,analog-value,46,FTR Valve Position,100,%
+3011016,analog-value,50,Maximum Demand Limit Offset,0,°F
+3011016,analog-value,51,Demand Limit Ramp,0,%
+3011016,analog-value,90,Temporary Control Time Limit,8,h
+3011016,analog-value,117,eZNS2_StickyArrow,0,
+3011016,analog-value,118,eZNS2_SliderMode,0,
+3011016,analog-value,119,eZNS2_SliderMin,70,
+3011016,analog-value,120,eZNS2_SliderMax,74,
+3011016,analog-value,121,eZNS2_SliderInc,1,
+3011016,analog-value,122,eZNS2_RT_SP,73,
+3011016,analog-value,123,eZNS2_SliderUnits,3,
+3011016,analog-value,129,eZNS2_Color,7,
+3011016,analog-value,999,Area Served,0,

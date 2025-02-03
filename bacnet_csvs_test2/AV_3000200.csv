@@ -1,0 +1,12 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3000200,analog-value,1,140W62nd - GX-1 - Space Setpoint,80,°F
+3000200,analog-value,101,140W62nd - ConEd Steam Meter-A Total Pulses,84480,
+3000200,analog-value,102,140W62nd - ConEd Steam Meter-B Total Pulses,457,
+3000200,analog-value,103,140W62nd - ConEd Steam Meter-C Total Pulses,722,
+3000200,analog-value,111,140W62nd - ConEd Steam Meter-A Total Steam Usage,844800,lb
+3000200,analog-value,112,140W62nd - ConEd Steam Meter-B Total Steam Usage,4570,lb
+3000200,analog-value,113,140W62nd - ConEd Steam Meter-C Total Steam Usage,7220,lb
+3000200,analog-value,121,140W62nd - ConEd Steam Total Steam Usage,856590,lb
+3000200,analog-value,122,140W62nd - ConEd Steam Meter-A Steam Flow Rate,600,lb/h
+3000200,analog-value,123,140W62nd - ConEd Steam Meter-B Steam Flow Rate,0,lb/h
+3000200,analog-value,124,140W62nd - ConEd Steam Meter-C Steam Flow Rate,0,lb/h

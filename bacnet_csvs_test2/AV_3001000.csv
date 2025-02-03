@@ -1,0 +1,106 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3001000,analog-value,11,140W62nd - Meter ID-1 Power,255,kW
+3001000,analog-value,21,140W62nd - Meter ID-2 Power,39,kW
+3001000,analog-value,31,140W62nd - Meter ID-3 Power,256,kW
+3001000,analog-value,41,140W62nd - Meter ID-4 Power,196,kW
+3001000,analog-value,51,140W62nd - Meter ID-5 Power,87.24,kW
+3001000,analog-value,101,140W62nd - ATS-1 (Fire Alarm) - A-B Line to Line Voltage,212,V
+3001000,analog-value,102,140W62nd - ATS-1 (Fire Alarm) - B-C Line to Line Voltage,211,V
+3001000,analog-value,103,140W62nd - ATS-1 (Fire Alarm) - C-A Line to Line Voltage,209,V
+3001000,analog-value,104,140W62nd - ATS-1 (Fire Alarm) Phase-A line to neutral voltage,122,V
+3001000,analog-value,105,140W62nd - ATS-1 (Fire Alarm) Phase-B line to neutral voltage,122,V
+3001000,analog-value,106,140W62nd - ATS-1 (Fire Alarm) Phase-C line to neutral voltage,121,V
+3001000,analog-value,107,140W62nd - ATS-1 (Fire Alarm) Phase A current,2,A
+3001000,analog-value,108,140W62nd - ATS-1 (Fire Alarm) Phase B current,2,A
+3001000,analog-value,109,140W62nd - ATS-1 (Fire Alarm) Phase C current,0,A
+3001000,analog-value,121,140W62nd - ATS-1 (Fire Alarm) - Average Current,1,A
+3001000,analog-value,122,140W62nd - ATS-1 (Fire Alarm) - Active Power total,0,kW
+3001000,analog-value,123,140W62nd - ATS-1 (Fire Alarm) - Reactive Power total,0,kvar
+3001000,analog-value,124,140W62nd - ATS-1 (Fire Alarm) - kVA total,0,kVA
+3001000,analog-value,125,140W62nd - ATS-1 (Fire Alarm) - Power Factor total,0.95,PF
+3001000,analog-value,126,140W62nd - ATS-1 (Fire Alarm) - Frequency,59.99,Hz
+3001000,analog-value,127,140W62nd - ATS-1 (Fire Alarm) - Normal kWH Net,33,kWh
+3001000,analog-value,201,140W62nd - ATS-2 (PP-ELEV (Elevators)) - A-B Line to Line Voltage,209,V
+3001000,analog-value,202,140W62nd - ATS-2 (PP-ELEV (Elevators)) - B-C Line to Line Voltage,213,V
+3001000,analog-value,203,140W62nd - ATS-2 (PP-ELEV (Elevators)) - C-A Line to Line Voltage,209,V
+3001000,analog-value,204,140W62nd - ATS-2 (PP-ELEV)  - Phase-A line to neutral voltage,120,V
+3001000,analog-value,205,140W62nd - ATS-2 (PP-ELEV)  - Phase-B line to neutral voltage,121,V
+3001000,analog-value,206,140W62nd - ATS-2 (PP-ELEV)  - Phase-C line to neutral voltage,123,V
+3001000,analog-value,207,140W62nd - ATS-2 (PP-ELEV (Elevators)) - Phase A current,28,A
+3001000,analog-value,208,140W62nd - ATS-2 (PP-ELEV (Elevators)) - Phase B current,28,A
+3001000,analog-value,209,140W62nd - ATS-2 (PP-ELEV (Elevators)) - Phase C current,25,A
+3001000,analog-value,221,140W62nd - ATS-2 (PP-ELEV (Elevators)) - Average Current,20,A
+3001000,analog-value,222,140W62nd - ATS-2 (PP-ELEV (Elevators)) - Active Power total,7,kW
+3001000,analog-value,223,140W62nd - ATS-2 (PP-ELEV (Elevators)) - Reactive Power total,1,kvar
+3001000,analog-value,224,140W62nd - ATS-2 (PP-ELEV (Elevators)) - kVA total,9,kVA
+3001000,analog-value,225,140W62nd - ATS-2 (PP-ELEV (Elevators)) Power Factor total,0.92,PF
+3001000,analog-value,226,140W62nd - ATS-2 (PP-ELEV (Elevators)) Frequency,59.99,Hz
+3001000,analog-value,227,140W62nd - ATS-2 (PP-ELEV (Elevators)) - Normal kWH Net,156077,kWh
+3001000,analog-value,301,140W62nd - ATS-3 (PP-EM(IT)) - A-B Line to Line Voltage,210,V
+3001000,analog-value,302,140W62nd - ATS-3 (PP-EM(IT)) - B-C Line to Line Voltage,211,V
+3001000,analog-value,303,140W62nd - ATS-3 (PP-EM(IT)) - C-A Line to Line Voltage,210,V
+3001000,analog-value,304,140W62nd - ATS-3 (PP-EM(IT)) - Phase-A line to neutral voltage,120,V
+3001000,analog-value,305,140W62nd - ATS-3 (PP-EM(IT)) - Phase-B line to neutral voltage,121,V
+3001000,analog-value,306,140W62nd - ATS-3 (PP-EM(IT)) - Phase-C line to neutral voltage,122,V
+3001000,analog-value,307,140W62nd - ATS-3 (PP-EM(IT)) - Phase A current,28,A
+3001000,analog-value,308,140W62nd - ATS-3 (PP-EM(IT)) - Phase B current,27,A
+3001000,analog-value,309,140W62nd - ATS-3 (PP-EM(IT)) - Phase C current,10,A
+3001000,analog-value,321,140W62nd - ATS-3 (PP-EM(IT)) - Average Current,22,A
+3001000,analog-value,322,140W62nd - ATS-3 (PP-EM(IT)) - Active Power total,7,kW
+3001000,analog-value,323,140W62nd - ATS-3 (PP-EM(IT)) - Reactive Power total,-3,kvar
+3001000,analog-value,324,140W62nd - ATS-3 (PP-EM(IT)) - kVA total,8,kVA
+3001000,analog-value,325,140W62nd - ATS-3 (PP-EM(IT)) Power Factor total,0.93,PF
+3001000,analog-value,326,140W62nd - ATS-3 (PP-EM(IT)) Frequency,59.99,Hz
+3001000,analog-value,327,140W62nd - ATS-3 (PP-EM(IT)) - Normal kWH Net,525016,kWh
+3001000,analog-value,401,140W62nd - ATS-4 (DP-EML(Lighting)) - A-B Line to Line Voltage,209,V
+3001000,analog-value,402,140W62nd - ATS-4 (DP-EML(Lighting)) - B-C Line to Line Voltage,211,V
+3001000,analog-value,403,140W62nd - ATS-4 (DP-EML(Lighting)) - C-A Line to Line Voltage,209,V
+3001000,analog-value,404,140W62nd - ATS-4 - (DP-EML) - Phase-A line to neutral voltage,120,V
+3001000,analog-value,405,140W62nd - ATS-4 - (DP-EML) - Phase-B line to neutral voltage,121,V
+3001000,analog-value,406,140W62nd - ATS-4 - (DP-EML) - Phase-C line to neutral voltage,122,V
+3001000,analog-value,407,140W62nd - ATS-4 (DP-EML(Lighting)) - Phase A current,182,A
+3001000,analog-value,408,140W62nd - ATS-4 (DP-EML(Lighting)) - Phase B current,276,A
+3001000,analog-value,409,140W62nd - ATS-4 (DP-EML(Lighting)) - Phase C current,216,A
+3001000,analog-value,421,140W62nd - ATS-4 (DP-EML(Lighting)) - Average Current,225,A
+3001000,analog-value,422,140W62nd - ATS-4 (DP-EML(Lighting)) - Active Power total,81,kW
+3001000,analog-value,423,140W62nd - ATS-4 (DP-EML(Lighting)) - Reactive Power total,-2,kvar
+3001000,analog-value,424,140W62nd - ATS-4 (DP-EML(Lighting)) - kVA total,81,kVA
+3001000,analog-value,425,140W62nd - ATS-4 (DP-EML(Lighting)) Power Factor total,1,PF
+3001000,analog-value,426,140W62nd - ATS-4 (DP-EML(Lighting)) Frequency,59.99,Hz
+3001000,analog-value,427,140W62nd - ATS-4 (DP-EML(Lighting)) - Normal kWH Net,4.5211e+06,kWh
+3001000,analog-value,501,140W62nd - ATS-5 (SB-AH(HVAC)) - A-B Line to Line Voltage,208,V
+3001000,analog-value,502,140W62nd - ATS-5 (SB-AH(HVAC)) - B-C Line to Line Voltage,210,V
+3001000,analog-value,503,140W62nd - ATS-5 (SB-AH(HVAC)) - C-A Line to Line Voltage,208,V
+3001000,analog-value,504,140W62nd - ATS-5 (SB-AH(HVAC)) - Phase-A line to neutral voltage,115,V
+3001000,analog-value,505,140W62nd - ATS-5 (SB-AH(HVAC)) - Phase-B line to neutral voltage,122,V
+3001000,analog-value,506,140W62nd - ATS-5 (SB-AH(HVAC)) - Phase-C line to neutral voltage,126,V
+3001000,analog-value,507,140W62nd - ATS-5 (SB-AH(HVAC)) - Phase A current,280,A
+3001000,analog-value,508,140W62nd - ATS-5 (SB-AH(HVAC)) - Phase B current,284,A
+3001000,analog-value,509,140W62nd - ATS-5 (SB-AH(HVAC)) - Phase C current,289,A
+3001000,analog-value,521,140W62nd - ATS-5 (SB-AH(HVAC)) - Average Current,284,A
+3001000,analog-value,522,140W62nd - ATS-5 (SB-AH(HVAC)) - Active Power total,96,kW
+3001000,analog-value,523,140W62nd - ATS-5 (SB-AH(HVAC)) - Reactive Power total,36,kvar
+3001000,analog-value,524,140W62nd - ATS-5 (SB-AH(HVAC)) - kVA total,103,kVA
+3001000,analog-value,525,140W62nd - ATS-5 (SB-AH(HVAC)) Power Factor total,0.94,PF
+3001000,analog-value,526,140W62nd - ATS-5 (SB-AH(HVAC)) Frequency,60,Hz
+3001000,analog-value,527,140W62nd - ATS-5 (SB-AH(HVAC)) - Normal kWH Net,4.22764e+06,kWh
+3001000,analog-value,601,140W62nd - ATS-6 (SB-MER1(HVAC)) - A-B Line to Line Voltage,210,V
+3001000,analog-value,602,140W62nd - ATS-6 (SB-MER1(HVAC)) - B-C Line to Line Voltage,211,V
+3001000,analog-value,603,140W62nd - ATS-6 (SB-MER1(HVAC)) - C-A Line to Line Voltage,209,V
+3001000,analog-value,604,140W62nd - ATS-6 (SB-MER1(HVAC)) - Phase-A line to neutral voltage,120,V
+3001000,analog-value,605,140W62nd - ATS-6 (SB-MER1(HVAC)) - Phase-B line to neutral voltage,121,V
+3001000,analog-value,606,140W62nd - ATS-6 (SB-MER1(HVAC)) - Phase-C line to neutral voltage,122,V
+3001000,analog-value,607,140W62nd - ATS-6 (SB-MER1(HVAC)) - Phase A current,43,A
+3001000,analog-value,608,140W62nd - ATS-6 (SB-MER1(HVAC)) - Phase B current,49,A
+3001000,analog-value,609,140W62nd - ATS-6 (SB-MER1(HVAC)) - Phase C current,49,A
+3001000,analog-value,621,140W62nd - ATS-6 (SB-MER1(HVAC)) - Average Current,47,A
+3001000,analog-value,622,140W62nd - ATS-6 (SB-MER1(HVAC)) - Active Power total,14,kW
+3001000,analog-value,623,140W62nd - ATS-6 (SB-MER1(HVAC)) - Reactive Power total,10,kvar
+3001000,analog-value,624,140W62nd - ATS-6 (SB-MER1(HVAC)) - kVA total,17,kVA
+3001000,analog-value,625,140W62nd - ATS-6 (SB-MER1(HVAC)) Power Factor total,0.83,PF
+3001000,analog-value,626,140W62nd - ATS-6 (SB-MER1(HVAC)) Frequency,60.01,Hz
+3001000,analog-value,627,140W62nd - ATS-6 (SB-MER1(HVAC)) - Normal kWH Net,2.25582e+06,kWh
+3001000,analog-value,701,140W62nd - Building Water Meter Total Pulses,6.16608e+06,
+3001000,analog-value,702,140W62nd - Building Domestic Water Consumption,4.61255e+07,gal (US)
+3001000,analog-value,711,140W62nd - Irrigation Water Meter Total Pulses,39,
+3001000,analog-value,712,140W62nd - Irrigation Water Consumption,0,gal (US)
