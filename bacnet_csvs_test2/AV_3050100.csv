@@ -1,0 +1,41 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3050100,analog-value,1,140W62nd - AHU-7 - Outside Air Temperature,46.8072,°F
+3050100,analog-value,2,140W62nd - AHU-7 - Outside Air Humidity,77.8808,%RH
+3050100,analog-value,3,140W62nd - AHU-7 - Outside Air Enthalpy,16.9179,BTU/lb
+3050100,analog-value,5,140W62nd - AHU-7 - Return Air Enthalpy,23.1202,BTU/lb
+3050100,analog-value,7,140W62nd - AHU-7 - Preheat Temperature,63.7534,°F
+3050100,analog-value,31,140W62nd - AHU-7 - MER-1 (GX-2) Space  Temperature Setpoint,72,°F
+3050100,analog-value,40,140W62nd - AHU-7 - Supply Air Setpoint,66,°F
+3050100,analog-value,41,140W62nd - AHU-7 - Return Air Setpoint,73,°F
+3050100,analog-value,42,140W62nd - AHU-7 - Preheat Setpoint,45,°F
+3050100,analog-value,45,140W62nd - AHU-7 - Mixed Air Setpoint,63,°F
+3050100,analog-value,46,140W62nd - AHU-7 - Economizer Command,29.4451,%
+3050100,analog-value,47,140W62nd - AHU-7 - Economizer Minimum Setpoint,20,%
+3050100,analog-value,60,140W62nd - AHU-7 - Static Pressure Setpoint,0.5,inWC
+3050100,analog-value,61,140W62nd - AHU-7 - Minimum VFD Setpoint,25,%
+3050100,analog-value,90,140W62nd - AHU-7 - Allow Temporary Manual Control Time Limit,8,h
+3050100,analog-value,200,140W62nd - AHU-7 - Fan Speed Offset,0,%
+3050100,analog-value,932,140W62nd - AHU-7 - VAV Average Space Temperature,68.6674,°F
+3050100,analog-value,933,140W62nd - AHU-7 - VAV WarmUp Target Temperature,68.2108,°F
+3050100,analog-value,934,140W62nd - AHU-7 - VAV PreCool Target Temperature,68.2108,°F
+3050100,analog-value,936,140W62nd - AHU-7 - VAV Global Occupied Setpoint,68,°F
+3050100,analog-value,937,140W62nd - AHU-7 - VAV Global Min Setpoint,68,°F
+3050100,analog-value,938,140W62nd - AHU-7 - VAV Global Max Setpoint,74,°F
+3050100,analog-value,940,140W62nd - AHU-7 - VAV Global Ngt Clg Setpoint,72,°F
+3050100,analog-value,941,140W62nd - AHU-7 - VAV Global Ngt Htg Setpoint,65,°F
+3050100,analog-value,942,140W62nd - AHU-7 - VAV Global Cooling Offset,0,°F
+3050100,analog-value,943,140W62nd - AHU-7 - VAV Global Heating Offset,2,°F
+3050100,analog-value,953,140W62nd - AHU-7 - VAV Override Time Limit,0,h
+3050100,analog-value,954,140W62nd - AHU-7 - VAV Override Time Left,0,min
+3050100,analog-value,955,140W62nd - AHU-7 - VAVs in Night Call,0,
+3050100,analog-value,956,140W62nd - AHU-7 - VAV Percentage of VAVs in Cooling,0,%
+3050100,analog-value,957,140W62nd - AHU-7 - VAV Percentage of VAVs in Heating,0,%
+3050100,analog-value,958,140W62nd - AHU-7 - VAV Percentage of VAVs Open Greater than 90,0,%
+3050100,analog-value,959,140W62nd - AHU-7 - VAV Percentage of VAVs Open Less than 50,0,%
+3050100,analog-value,960,140W62nd - AHU-7 - VAVs in Demand Controlled Ventilation,0,
+3050100,analog-value,961,140W62nd - AHU-7 - VAV Number of VAVs Open Greater than 80,0,
+3050100,analog-value,962,140W62nd - AHU-7 - VAV Number of VAVs Open Greater than 95,0,
+3050100,analog-value,963,140W62nd - AHU-7 - VAV Number of VAVs Open Less than 70,0,
+3050100,analog-value,964,140W62nd - AHU-7 - VAV Number of VAVs Open Less than 90,0,
+3050100,analog-value,965,140W62nd - AHU-7 - Number of VAVs (Total),58,
+3050100,analog-value,966,140W62nd - AHU-7 - Number of VAVs (Communicating),0,

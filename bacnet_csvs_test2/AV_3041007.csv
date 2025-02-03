@@ -1,0 +1,38 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3041007,analog-value,1,140W62nd VAVR-4-7 - Space Temperature,70.0182,°F
+3041007,analog-value,2,AHU Supply Temperature,67.3209,°F
+3041007,analog-value,3,Outside Air Temperature,46.8072,°F
+3041007,analog-value,10,Airflow Setpoint,280,CFM
+3041007,analog-value,11,Maximum Airflow Setpoint,700,CFM
+3041007,analog-value,12,Minimum Airflow Setpoint,350,CFM
+3041007,analog-value,13,Reheat Airflow Setpoint,280,CFM
+3041007,analog-value,20,Occupied Setpoint,72,°F
+3041007,analog-value,21,Temperature Deadband,0,°F
+3041007,analog-value,22,Cooling Setpoint,72,°F
+3041007,analog-value,23,Heating Setpoint,70,°F
+3041007,analog-value,24,Unoccupied Cooling Setpoint,75,°F
+3041007,analog-value,25,Unoccupied Heating Setpoint,65,°F
+3041007,analog-value,26,Minimum Setpoint,68,°F
+3041007,analog-value,27,Maximum Setpoint,76,°F
+3041007,analog-value,28,Cooling Offset,0,°F
+3041007,analog-value,29,Heating Offset,2,°F
+3041007,analog-value,30,Override Time Limit,0,h
+3041007,analog-value,31,Override Time Remaining,0,h
+3041007,analog-value,40,Box Size,12,in
+3041007,analog-value,41,KFactor,1802,
+3041007,analog-value,42,Zero Calibration Factor,388,
+3041007,analog-value,43,Damper Position,24.4443,%
+3041007,analog-value,44,Balancing Coefficient,1.15,
+3041007,analog-value,45,Reheat Valve Position,36.3,%
+3041007,analog-value,46,FTR Valve Position,100,%
+3041007,analog-value,50,Maximum Demand Limit Offset,0,°F
+3041007,analog-value,51,Demand Limit Ramp,0,%
+3041007,analog-value,90,Temporary Control Time Limit,8,h
+3041007,analog-value,117,eZNS2_StickyArrow,0,
+3041007,analog-value,118,eZNS2_SliderMode,0,
+3041007,analog-value,119,eZNS2_SliderMin,68,
+3041007,analog-value,120,eZNS2_SliderMax,76,
+3041007,analog-value,121,eZNS2_SliderInc,1,
+3041007,analog-value,122,eZNS2_RT_SP,74,
+3041007,analog-value,123,eZNS2_SliderUnits,3,
+3041007,analog-value,129,eZNS2_Color,3,

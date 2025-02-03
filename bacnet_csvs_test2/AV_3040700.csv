@@ -1,0 +1,5 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3040700,analog-value,201,140W62nd - Chillers -  Steam Mass Flow,0,lb/h
+3040700,analog-value,202,140W62nd - Chillers -  Steam Pressure,90.717,psi
+3040700,analog-value,203,140W62nd - Chillers -  Total Steam Usage,24810.4,lb
+3040700,analog-value,204,140W62nd - Chillers -  Grand Total Steam Usage,24862,lb

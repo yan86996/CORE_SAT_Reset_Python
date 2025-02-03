@@ -1,0 +1,12 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3040500,binary-value,8,140W62nd - AHU-5 -   Static Pressure Reset Selection,inactive,
+3040500,binary-value,41,140W62nd - AHU-5 -   Preheat Call,active,
+3040500,binary-value,50,140W62nd - AHU-5 -   Economizer Status,active,
+3040500,binary-value,52,140W62nd - AHU-5 -   Alarm Reset,inactive,
+3040500,binary-value,90,140W62nd - AHU-5 -   Allow Temporary Manual Control,inactive,
+3040500,binary-value,100,140W62nd - AHU-5 -   HeartBeat,active,
+3040500,binary-value,201,140W62nd - AHU-5 -   Return Fan Offset Setup,inactive,
+3040500,binary-value,930,140W62nd - AHU-5 -   VAV Global Enable,inactive,
+3040500,binary-value,931,140W62nd - AHU-5 -   VAV Electric Heat Disable,inactive,
+3040500,binary-value,932,140W62nd - AHU-5 -   VAV Global Schedule Mode,inactive,
+3040500,binary-value,936,140W62nd - AHU-5 -   VAV Tenant Override Call,inactive,

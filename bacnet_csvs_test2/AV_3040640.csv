@@ -1,0 +1,29 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3040640,analog-value,0,OUTPUT SPEED,0,RPM
+3040640,analog-value,1,OUTPUT FREQ,0,Hz
+3040640,analog-value,2,DC BUS VOLT,289,V
+3040640,analog-value,3,OUTPUT VOLT,0,V
+3040640,analog-value,4,CURRENT,0,A
+3040640,analog-value,5,TORQUE,0,%
+3040640,analog-value,6,POWER,0,kW
+3040640,analog-value,7,DRIVE TEMP,21.8,°C
+3040640,analog-value,8,KWH (R),16004,kWh
+3040640,analog-value,9,MWH (NR),16,MWh
+3040640,analog-value,10,PRC PID FBCK,0,%
+3040640,analog-value,11,PRC PID DEV,0,%
+3040640,analog-value,12,EXT PID FBCK,0,%
+3040640,analog-value,13,EXT PID DEV,0,%
+3040640,analog-value,14,RUN TIME (R),4942,h
+3040640,analog-value,15,MOTOR TEMP,0,°C
+3040640,analog-value,16,INPUT REF1,0,%
+3040640,analog-value,17,INPUT REF2,0,%
+3040640,analog-value,18,LAST FLT,0,
+3040640,analog-value,19,PREV FLT 1,0,
+3040640,analog-value,20,PREV FLT 2,0,
+3040640,analog-value,21,AO1 ACT,4,mA
+3040640,analog-value,22,AO2 ACT,4,mA
+3040640,analog-value,23,ACCEL1 TIME,30,s
+3040640,analog-value,24,DECEL1 TIME,30,s
+3040640,analog-value,25,MBOX PARAM,0,
+3040640,analog-value,26,MBOX DATA,0,
+3040640,analog-value,27,EXT PID STPT,0,%

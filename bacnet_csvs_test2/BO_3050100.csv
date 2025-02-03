@@ -1,0 +1,7 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3050100,binary-output,1,140W62nd - AHU-7 - Supply Fan VFD Enable,active,
+3050100,binary-output,5,140W62nd - AHU-7 - Return Fan VFD Enable,active,
+3050100,binary-output,12,140W62nd - AHU-7 - BMS Alarm Reset,inactive,
+3050100,binary-output,101,140W62nd - AHU-7 - CHWP-5 Enable,inactive,
+3050100,binary-output,102,140W62nd - AHU-7 - GX-2 (MER-1) Enable,inactive,
+3050100,binary-output,103,140W62nd - AHU-7 - TX-1 Enable,active,

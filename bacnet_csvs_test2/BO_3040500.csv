@@ -1,0 +1,6 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3040500,binary-output,1,140W62nd - AHU-5 -   Supply Fan VFD Enable,active,
+3040500,binary-output,3,140W62nd - AHU-5 -   RF-5 VFD Enable,active,
+3040500,binary-output,10,140W62nd - AHU-5 -   TX-2 Enable,inactive,
+3040500,binary-output,12,140W62nd - AHU-5 -   GX-3 (MER-2) Enable,inactive,
+3040500,binary-output,16,140W62nd - AHU-5 -   Alarm Reset Relay,inactive,

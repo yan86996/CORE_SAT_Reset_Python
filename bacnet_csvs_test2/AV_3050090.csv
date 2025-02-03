@@ -1,0 +1,12 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3050090,analog-value,1,algo_to_choose_for_AHU_5,2,
+3050090,analog-value,2,G36_satsp_AHU_5,58.2,°F
+3050090,analog-value,3,CORE_satsp_AHU_5,57.5,°F
+3050090,analog-value,4,clg_coil_clo_temp_chg_AHU_5,2,°F
+3050090,analog-value,5,chw_coils_hist_AHU_5,1,
+3050090,analog-value,6,rhv_clo_temp_chg_3-3,2,°F
+3050090,analog-value,7,rhv_coils_hist_3-3,0,
+3050090,analog-value,8,rhv_clo_temp_chg_3-4,2,°F
+3050090,analog-value,9,rhv_coils_hist_3-4,0,
+3050090,analog-value,10,rhv_clo_temp_chg_3-5,2,°F
+3050090,analog-value,11,rhv_coils_hist_3-5,0,

@@ -1,0 +1,132 @@
+# device,objecttype,instance,Object_Name,Present_Value,Units
+3050000,analog-value,1,140W62nd - AHU-6 - Outside Air Temperature,46.8072,°F
+3050000,analog-value,2,140W62nd - AHU-6 - Outside Air Humidity,78.0916,%RH
+3050000,analog-value,3,140W62nd - AHU-6 - Outside Air Enthalpy,16.9334,BTU/lb
+3050000,analog-value,5,140W62nd - AHU-6 - Return Air Enthalpy,23.3794,BTU/lb
+3050000,analog-value,7,140W62nd - AHU-6 - Preheat Temperature,65.2787,°F
+3050000,analog-value,40,140W62nd - AHU-6 - Supply Air Setpoint,65.0,°F
+3050000,analog-value,41,140W62nd - AHU-6 - Return Air Setpoint,72.0,°F
+3050000,analog-value,42,140W62nd - AHU-6 - Preheat Setpoint,45.0,°F
+3050000,analog-value,45,140W62nd - AHU-6 - Mixed Air Setpoint,67.0,°F
+3050000,analog-value,46,140W62nd - AHU-6 - Economizer Command,41.6053,%
+3050000,analog-value,47,140W62nd - AHU-6 - Economizer Minimum Setpoint,20.0,%
+3050000,analog-value,60,140W62nd - AHU-6 - Static Pressure Setpoint,1.0,inWC
+3050000,analog-value,61,140W62nd - AHU-6 - Minimum VFD Setpoint,15.0,%
+3050000,analog-value,71,140W62nd - EMR G-75 Space Temperature Setpoint (EV-EX) (Not used),85.0,°F
+3050000,analog-value,72,140W62nd - AHU-6 - EMR G-75 Space Temperature (EV-EX),73.8437,°F
+3050000,analog-value,90,140W62nd - AHU-6 - Allow Temporary Manual Control Time Limit,8.0,h
+3050000,analog-value,200,140W62nd - AHU-6 - Fan Speed Offset,0.0,%
+3050000,analog-value,932,140W62nd - AHU-6 - VAV Average Space Temperature,68.6579,°F
+3050000,analog-value,933,140W62nd - AHU-6 - VAV WarmUp Target Temperature,68.2108,°F
+3050000,analog-value,934,140W62nd - AHU-6 - VAV PreCool Target Temperature,68.2108,°F
+3050000,analog-value,936,140W62nd - AHU-6 - VAV Global Occupied Setpoint,73.0,°F
+3050000,analog-value,937,140W62nd - AHU-6 - VAV Global Min Setpoint,69.0,°F
+3050000,analog-value,938,140W62nd - AHU-6 - VAV Global Max Setpoint,73.0,°F
+3050000,analog-value,940,140W62nd - AHU-6 - VAV Global Ngt Clg Setpoint,70.0,°F
+3050000,analog-value,941,140W62nd - AHU-6 - VAV Global Ngt Htg Setpoint,66.0,°F
+3050000,analog-value,942,140W62nd - AHU-6 - VAV Global Cooling Offset,0.0,°F
+3050000,analog-value,943,140W62nd - AHU-6 - VAV Global Heating Offset,2.0,°F
+3050000,analog-value,953,140W62nd - AHU-6 - VAV Override Time Limit,0.0,h
+3050000,analog-value,954,140W62nd - AHU-6 - VAV Override Time Left,0.0,min
+3050000,analog-value,955,140W62nd - AHU-6 - VAVs in Night Call,0.0,
+3050000,analog-value,956,140W62nd - AHU-6 - VAV Percentage of VAVs in Cooling,0.0,%
+3050000,analog-value,957,140W62nd - AHU-6 - VAV Percentage of VAVs in Heating,0.0,%
+3050000,analog-value,958,140W62nd - AHU-6 - VAV Percentage of VAVs Open Greater than 90,0.0,%
+3050000,analog-value,959,140W62nd - AHU-6 - VAV Percentage of VAVs Open Less than 50,0.0,%
+3050000,analog-value,960,140W62nd - AHU-6 - VAVs in Demand Controlled Ventilation,0.0,
+3050000,analog-value,961,140W62nd - AHU-6 - VAV Number of VAVs Open Greater than 80,0.0,
+3050000,analog-value,962,140W62nd - AHU-6 - VAV Number of VAVs Open Greater than 95,0.0,
+3050000,analog-value,963,140W62nd - AHU-6 - VAV Number of VAVs Open Less than 70,0.0,
+3050000,analog-value,964,140W62nd - AHU-6 - VAV Number of VAVs Open Less than 90,0.0,
+3050000,analog-value,965,140W62nd - AHU-6 - Number of VAVs (Total),45.0,
+3050000,analog-value,966,140W62nd - AHU-6 - Number of VAVs (Communicating),0.0,
+3050090,analog-value,9999999,algo to choose for AHU_6,2.0,/
+3050090,analog-value,9999999,picked algo finished for AHU_6,1.0,/
+3050090,analog-value,9999999,G36 satsp AHU_6,65.0,°F
+3050090,analog-value,9999999,CORE satsp AHU_6,65.0,°F
+3050090,analog-value,9999999,clg_coil_clo_temp_chg_AHU_6,2.0,°F
+3050090,analog-value,9999999,chw_coils_hist_AHU_6,1.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_G-6,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_G-6,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_G-26,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_G-26,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_G-27,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_G-27,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_G-28,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_G-28,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_G-29,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_G-29,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_G-30,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_G-30,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_G-31,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_G-31,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_G-32,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_G-32,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_G-33,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_G-33,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_G-34,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_G-34,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_1-18,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_1-18,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_1-19(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_1-19(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_1-20(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_1-20(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_1-21,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_1-21,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_1-22(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_1-22(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_1-23(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_1-23(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_2-16,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_2-16,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_2-17,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_2-17,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_2-18(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_2-18(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_2-19(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_2-19(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_2-21(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_2-21(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_2-22(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_2-22(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_2-23(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_2-23(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_2-24,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_2-24,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_3-16(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_3-16(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_3-17(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_3-17(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_3-18(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_3-18(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_3-19(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_3-19(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_3-20(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_3-20(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_3-21(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_3-21(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_3-22,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_3-22,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_3-23(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_3-23(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_3-24(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_3-24(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_3-25(CLG),2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_3-25(CLG),0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_4-7,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_4-7,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_4-10,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_4-10,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_4-11,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_4-11,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_4-12,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_4-12,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_4-14,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_4-14,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_4-15,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_4-15,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_4-16,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_4-16,0.0,/
+3050090,analog-value,9999999,rhv_clo_temp_chg_4-17,2.0,°F
+3050090,analog-value,9999999,rhv_coils_hist_4-17,0.0,/

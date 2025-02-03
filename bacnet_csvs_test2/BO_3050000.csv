@@ -1,0 +1,6 @@
+device,object-type,instance,Object_Name,Present_Value,Units
+3050000,binary-output,1,140W62nd - AHU-6 - Supply Fan VFD Enable,active,
+3050000,binary-output,5,140W62nd - AHU-6 - Return Fan VFD Enable,active,
+3050000,binary-output,12,140W62nd - AHU-6 - BMS Alarm Reset,inactive,
+3050000,binary-output,101,140W62nd - AHU-6 - CHWP-4 Enable,inactive,
+3050000,binary-output,103,140W62nd - AHU-6 - EV-EX Enable,inactive,
