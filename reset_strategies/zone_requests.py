@@ -1,134 +1,262 @@
-if __name__=='__main__':
-    import os, sys
-    import time
-    from datetime import datetime, date
-    import pdb 
-    # set the working directory to be where this script is located
-    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    os.chdir(script_dir)
-    
-    ###
-    ## load custom modules
-    ###
-    import reset
-    import zone_requests
-    from g36 import G36
-    from core_v0 import CORE
-    
-    ###
-    ## loading the mapping dictionary processed data
-    ###
-    from mapping_data import *
-    from rand_dates import *
-    
-    # initialization
-    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test2'))
-    
-    damper = 'Damper Position'
-    flow = 'Airflow'
-    flow_min = 'Minimum Airflow Setpoint'
-    flow_max = 'Maximum Airflow Setpoint'
-    room_temp = 'Space Temperature'
-    clg_setpoint = 'Cooling Setpoint'
-    core_version = 'v0'
+import os, sys, time, shutil, re
+from datetime import datetime
+import numpy as np
 
-    # trim and respond logic params
-    # AHU5:26 zones, AHU6:42 zones, AHU7: 58 zones
-    num_ignore_ahu5, num_ignore_ahu6, num_ignore_ahu7 = 3, 5, 6
+class Requests:
+  """ This superclass calculates the number of requests
+  for each zone
+  """
+  
+  def __init__(self, verbose=False, ignore=[], important=[], folder_dir = None,
+               zone_names=None, zone_dev_map = None, room_temp=None, clg_setpoint=None,    
+               flow=None, flow_min=None, flow_max=None, damper=None,
+	           lim_dt_errs = 20,  fdd=False, low_temp_cutoff=None, high_temp_cutoff=None):
+               
+    self.rR = 0 # raw requests
+    self.R = 0 # importance weighted requests
+    self.ignore = ignore
+    self.important = important
+    self.zone_dev_map = zone_dev_map
+    self.zd = {} # dict object representing all of the necessary zone data
+    self.missingPartial = [] # list of names of zones that are missing some required data
+    self.missingEssential = [] # list of names of zones that are missing some required data
+    self.verbose = verbose
+    self.folder_dir = folder_dir
+    self.zone_names = zone_names
+    self.room_temp = room_temp
+    self.clg_setpoint = clg_setpoint
+    self.flow = flow
+    self.flow_max = flow_max
+    self.flow_min = flow_min
+    self.damper = damper
+    self.fdd = fdd
+    self.low_temp_cutoff = low_temp_cutoff
+    self.high_temp_cutoff = high_temp_cutoff
+    self.lim_dt_errs = lim_dt_errs
     
-    sp_default = 58 # default setpoint if control algo doesn't work
-    sp_trim = 0.2
-    sp_res  = -0.3
-    sp_res_max = -1.0
-    sat_min = 55 
-    sat_max = 65
-                
-    # pick algorithm
-    if date.today() in rand_dates_Baseline:
-        algo = 0 # baseline
-    elif date.today() in rand_dates_G36:
-        algo = 1 # G36
-    elif date.today() in rand_dates_CORE:
-        algo = 2 # CORE      
-    else:
-        raise ValueError("Today is not in any of the rand rates")
-    
-    # zone list (zones_5, zones_6, zones_7) extracted by extract_dev_ID.py
-    zones_and_ahus = [(zones_5, 'AHU_5', num_ignore_ahu5), (zones_6, 'AHU_6', num_ignore_ahu6), (zones_7, 'AHU_7', num_ignore_ahu7)]
+  def update(self):
+    # method to be overridden depending on data
+    # required to calculate the requests
+    raise NotImplementedError
 
-    for zones, ahu, num_ignore in zones_and_ahus:
-                
-        # instantiate temp requests objects
-        temperature_requests = zone_requests.Temperature(verbose=False, folder_dir = folder_dir, zone_dev_map = devID_zoneID, zone_names=zones,                                                 
-                                                         flow=flow, flow_min=flow_min, flow_max=flow_max, clg_setpoint=clg_setpoint,
-                                                         room_temp=room_temp, low_temp_cutoff = 72.0, high_temp_cutoff = 75.0)
-                                                        
-        # instantiate the reset object
-        temperature_reset = reset.Reset(SPmin=sat_min, SPmax=sat_max, num_ignore=num_ignore, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max)
+  def handleAtypicalZones(self):
+    # ignore any ignored zones
+    for z in sorted(self.ignore):
+      if z in self.zd:
+        del self.zd[z]        
+    # ignore any zones missing essential data      
+    for z in sorted(self.missingEssential):
+      if z in self.zd:
+        del self.zd[z]  
+    
+  def calcTotalRequests(self):
+    # Sum up the total number of requests (and also weighted by importance)
+    self.rR = 0
+    self.R = 0
+    for z in self.zd:
+      if 'requests' in self.zd[z]:
+        self.rR += self.zd[z]['requests']
+        if 'importance' in self.zd[z]:
+          self.R += self.zd[z]['requests'] * float(self.zd[z]['importance'])
+        else:
+          self.R += self.zd[z]['requests']
 
-        # G36 and CORE calculations will run whatever the date
-        # but will only overwrite the csv depending on the algo sequence number
+    rv = {
+      'raw_requests': self.rR, 
+      'weighted_requests': self.R, 
+      'ignored_zones': self.ignore, 
+      'partial_zones': self.missingPartial
+    }
+
+    if self.verbose:
+      print('\n================= Requests summary ================ ')
+      print('Total raw requests: ' + str(self.rR))
+      print('Total importance-weighted requests: ' + str(self.R))
+      if len(self.ignore):
+        print('Ignored zones (user selected): ')
+      if len(self.missingEssential):   
+        print('Ignored zones (due to missing essential data): ')
+      if len(self.missingPartial):  
+        print('Partial request results only (due to missing data, or a failed point): ')
+
+    return rv
+
+class Pressure(Requests):
+  """ This class calculates the number of requests
+  for a duct static pressure reset strategy according
+  to the Tailor Engineering Sequence of Operations.
+  """
+
+  def __init__(self, *args, **kwargs):
+    super(Pressure, self).__init__(*args, **kwargs)
+
+  def update(self):
+    self.missingPartial = []
+    self.missingEssential = []
+
+    # clear existing zone data from previous update
+    for z in self.zd:
+      if 'damper' in self.zd[z]:
+        del self.zd[z]['damper']
+      if 'flow' in self.zd[z]:
+        del self.zd[z]['flow']
+      if 'flow_max' in self.zd[z]:
+        del self.zd[z]['flow_max']      
+
+    for zone_name in self.zone_names:
+        self.zd[zone_name] = {}
         
-        ###
-        ## G36 control
-        ###
-        # SP limits based on oat
-        sp_min_at_lo_oat = 55
-        sp_max_at_lo_oat = 65
-        sp_min_at_hi_oat = 55
-        sp_max_at_hi_oat = 55
-        lo_oat = 60
-        hi_oat = 70
+        # from AV_XXXX.csv
+        div_ID = self.zone_dev_map[zone_name]
+        zone_csv_AV = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+        zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
         
-        g36_control = G36(algo=algo, folder_dir=folder_dir, ahu_dev_map=devID_ahuID, zone_requests=temperature_requests, reset=temperature_reset, num_ignore=num_ignore, 
-                          ahu_name=ahu, SP0=sp_default, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max, lo_oat=lo_oat, hi_oat=hi_oat,
-                          SPmin_at_lo_oat=sp_min_at_lo_oat, SPmax_at_lo_oat=sp_max_at_lo_oat, SPmin_at_hi_oat=sp_min_at_hi_oat, SPmax_at_hi_oat = sp_max_at_hi_oat,
-                          )
-                          
-        g36_sat = g36_control.get_new_satsp()
-        # g36_sat = g36_control.get_new_satsp_humd(55, 60, 65, 58)
+        # min airflow
+        min_flow = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_min) >= 0][0]
+        self.zd[zone_name]['min_flow'] = min_flow
+        # max airflow
+        max_flow = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_max) >= 0][0]
+        self.zd[zone_name]['max_flow'] = max_flow  
         
-        ###
-        ## CORE control
-        ###
-        diff_sat = [-0.5, 0, 0.5]
-        # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
-        dehumd_limits = (55, 60, 65, 58)
-        dehumid = True
+        # from AI_XXXX.csv
+        zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
+        zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
         
-        core_control = CORE(algo=algo, core_version=core_version, dehumid=dehumid, dehumd_limits=dehumd_limits, g36_sat=g36_sat, folder_dir=folder_dir, zone_names=zones, ahu_name=ahu,        
-                            zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID, pump_dev_map=devID_pumpID,
-                            flow=flow, flow_min=flow_min, flow_max=flow_max, zone_requests=temperature_requests, reset=temperature_reset, 
-                            ahu_dev_map=devID_ahuID, num_ignore=num_ignore, diff_sat=diff_sat, SP0=sp_default, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max,                    
-                            )
-        
-        core_sat = core_control.get_new_satsp()
-        
-        if algo == 0:
-            print('# Baseline control used')
-            
-    # move algo values into AV_3050090.csv
-    filtered_rows  = []
-    for _, value in devID_ahuID.items():
-        out_csv = os.path.join(folder_dir, f'AV_{value}_out.csv')
-        data = np.genfromtxt(out_csv, delimiter=',', dtype=str, encoding='utf-8')
-        
-        # Extract rows where the "instance" column contains '99999'
-        rows = data[data[:, 2] == '9999999', :]
-        if rows.size > 0:
-            filtered_rows.append(rows)
-                
-    # Combine filtered data with the header
-    if filtered_rows:
-        header = ('# device', 'objecttype', 'instance', 'Object_Name', 'Present_Value', 'Units')
-        filtered_data = np.vstack([header] + filtered_rows)
+        # airflow
+        airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
+        self.zd[zone_name]['flow'] = airflow
     
-        # Save to a new CSV file
-        output_path =  os.path.join(folder_dir, 'AV_3050090_out.csv')
-        np.savetxt(output_path, filtered_data, delimiter=",", fmt="%s")
-    
-        # Provide the file for download
-        output_path
-    else:
-        output_path = "No matching rows found."
+    print('\n======= for pressure requests =======\n' )
+    print(self.zd)
+
+    # calculate requests
+    for z in sorted(self.zd):
+      if 'damper' in self.zd[z]:
+        if self.zd[z]['damper'] < 95:
+          self.zd[z]['requests'] = 0
+        if self.zd[z]['damper'] >= 95:
+          self.zd[z]['requests'] = 1
+          if 'flow' in self.zd[z] and 'flow_max' in self.zd[z]:
+            if self.zd[z]['flow'] <= self.zd[z]['flow_max']*0.7:
+              self.zd[z]['requests'] = 2    
+            if self.zd[z]['flow'] <= self.zd[z]['flow_max']*0.5:
+              self.zd[z]['requests'] = 3
+            if self.zd[z]['flow'] <= self.zd[z]['flow_max']*0.25 and self.fdd:
+              self.zd[z]['requests'] = 0
+              self.missingPartial.append(z)
+          else:
+            self.missingPartial.append(z)
+      else:
+        self.missingEssential.append(z)
+
+    self.handleAtypicalZones()
+
+    if self.verbose:
+      self.displayDetails()
+
+    return self.calcTotalRequests()
+
+  def displayDetails(self):
+    # Print the results for each zone if requested
+    print('\n================= Details for zones with almost fully open dampers ================ ')
+    for z in sorted(self.zd):
+      if self.zd[z]['damper'] >= 95:
+        print(str(z))
+
+class Temperature(Requests):
+
+  def __init__(self, *args, **kwargs):
+    super(Temperature, self).__init__(*args, **kwargs)
+
+  def update(self):
+    self.missingPartial = []
+    self.missingEssential = []
+    self.h = 0
+ 
+    # clear existing zone data from previous update
+    for z in self.zd:
+      if 'cooling_loop' in self.zd[z]:
+        del self.zd[z]['cooling_loop']
+      if 'room_temp' in self.zd[z]:
+        del self.zd[z]['room_temp']
+      if 'clg_setpoint' in self.zd[z]:
+        del self.zd[z]['clg_setpoint']
+
+    for zone_name in self.zone_names:
+        self.zd[zone_name] = {}
+        # get zone data
+        div_ID = self.zone_dev_map[zone_name]
+        zone_csv = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+        zone_data = np.genfromtxt(zone_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
         
+        # min airflow
+        min_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_min) >= 0][0]
+        self.zd[zone_name]['min_flow'] = min_flow
+
+        # max airflow
+        max_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_max) >= 0][0]
+        self.zd[zone_name]['max_flow'] = max_flow  
+
+        # room temp
+        self.zd[zone_name]['room_temp'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.room_temp) >= 0][0] 
+
+        # cooling setpoint
+        self.zd[zone_name]['clg_setpoint'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.clg_setpoint) >= 0][0] 
+        
+        # from AI_XXXX.csv
+        zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
+        zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
+        
+        # airflow
+        airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
+        self.zd[zone_name]['flow'] = airflow
+        
+        # cooling loop
+        self.zd[zone_name]['cooling_loop'] = (self.zd[zone_name]['flow'] - min_flow)/(max_flow - min_flow)
+     
+    # print('\n======= for cooling requests =======\n' )
+    # print(self.zd)
+
+    # count cooling zones           
+    self.c = 0
+    # calculate cooling requests
+    for z in sorted(self.zd):
+      if 'cooling_loop' in self.zd[z]:
+        if self.zd[z]['room_temp'] > self.zd[z]['clg_setpoint']:
+          self.c += 1   
+        if self.zd[z]['cooling_loop'] < .95:
+          self.zd[z]['requests'] = 0
+        if self.zd[z]['cooling_loop'] >= .95:
+          self.zd[z]['requests'] = 1
+          
+        if self.zd[z]['room_temp'] >= self.zd[z]['clg_setpoint'] + 3.0:
+          self.zd[z]['requests'] = 2    
+        if self.zd[z]['room_temp'] >= self.zd[z]['clg_setpoint'] + 5.0:
+          self.zd[z]['requests'] = 3
+          
+        if self.low_temp_cutoff:
+          if self.zd[z]['clg_setpoint'] <= self.low_temp_cutoff:
+            #ignore requests from zone with a setpoint below a self.low_temp_cutoff
+            self.zd[z]['requests'] = 0
+          else:
+            self.missingPartial.append(z)
+      else:
+        self.missingEssential.append(z)
+
+    self.handleAtypicalZones()
+    
+    if self.verbose:
+      self.displayDetails()
+
+    rv = self.calcTotalRequests()
+    rv['cooling_zones'] = self.c
+    
+    return rv
+
+  def displayDetails(self):
+    # Print the results for each zone if requested
+    print('\n================= Details for zones with cooling loop almost at maximum ================ ')
+    for z in sorted(self.zd):
+      if 'cooling_loop' in self.zd[z]:
+        if self.zd[z]['cooling_loop'] >= 95:
+          print(str(z))
