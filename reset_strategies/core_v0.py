@@ -275,7 +275,7 @@ class CORE:
             except Exception as e:
                 print(e)
                 new_core_sat = np.nan
-                core_finish = 0
+                core_finish = -1
             
         self.ts_data.append(new_core_sat) # log 
         self.ts_header.append('new CORE SAT setpoint') # log
@@ -285,7 +285,7 @@ class CORE:
         
         # G36 algo finished
         if self.g36_sat == np.nan:
-            g36_finish = 0
+            g36_finish = -1
         else:
             g36_finish = 1
       
