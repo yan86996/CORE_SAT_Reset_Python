@@ -1,152 +1,134 @@
-import os, csv, sys
-from datetime import datetime
-import numpy as np
-import time
-# import zone_requests, reset
+if __name__=='__main__':
+    import os, sys
+    import time
+    from datetime import datetime, date
+    import pdb 
+    # set the working directory to be where this script is located
+    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    os.chdir(script_dir)
+    
+    ###
+    ## load custom modules
+    ###
+    import reset
+    import zone_requests
+    from g36 import G36
+    from core_v0 import CORE
+    
+    ###
+    ## loading the mapping dictionary processed data
+    ###
+    from mapping_data import *
+    from rand_dates import *
+    
+    # initialization
+    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test2'))
+    
+    damper = 'Damper Position'
+    flow = 'Airflow'
+    flow_min = 'Minimum Airflow Setpoint'
+    flow_max = 'Maximum Airflow Setpoint'
+    room_temp = 'Space Temperature'
+    clg_setpoint = 'Cooling Setpoint'
+    core_version = 'v0'
 
-class G36:
-    def __init__(self, algo=None, folder_dir=None, oat_name=None, oarh_name=None, zone_requests=None, reset=None, ahu_dev_map=None, 
-                 num_ignore=None, important=None, ahu_name=None, SP0=None, SPtrim=None, SPres=None, SPres_max=None, 
-                 lo_oat=None, hi_oat=None, SPmin_at_lo_oat=None, SPmax_at_lo_oat=None, SPmin_at_hi_oat=None, SPmax_at_hi_oat=None, 
-                 ):
-        self.algo = algo
-        self.folder_dir = folder_dir
-        self.ahu_name = ahu_name
-        self.SPmin_at_lo_oat = SPmin_at_lo_oat
-        self.SPmax_at_lo_oat = SPmax_at_lo_oat
-        self.SPmin_at_hi_oat = SPmin_at_hi_oat
-        self.SPmax_at_hi_oat = SPmax_at_hi_oat
-        self.SP0 = SP0 # default setpoint if control algo doesn't work
-        self.lo_oat = lo_oat
-        self.hi_oat = hi_oat
-        self.requests = zone_requests # zone_requests is an instantiated temp request object
-        self.reset = reset # reset is an instantiated reset object
-        self.num_ignore = num_ignore
-        self.SPtrim = SPtrim
-        self.SPres = SPres
-        self.SPres_max = SPres_max
-        self.important = important
-        
-        # get AHU data from AV_XX.csv
-        ahu_div_ID = ahu_dev_map[ahu_name]
-        self.ahu_div_ID = ahu_div_ID
-        ahu_csv_AV = os.path.join(folder_dir, f'AV_{ahu_div_ID}.csv')
-        ahu_data_AV = np.genfromtxt(ahu_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
-        self.ahu_data_AV = ahu_data_AV
-        self.ahu_data_AV_header = ahu_data_AV.dtype.names
+    # trim and respond logic params
+    # AHU5:26 zones, AHU6:42 zones, AHU7: 58 zones
+    num_ignore_ahu5, num_ignore_ahu6, num_ignore_ahu7 = 3, 5, 6
     
-        # current sat setpoint
-        self.sat = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Supply Air Setpoint') >= 0][0]
-        
-        # current oat
-        self.current_oat = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Outside Air Temperature') >= 0][0]
-        
-        # outdoor RH
-        self.current_oarh = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Outside Air Humidity') >= 0][0]
-      
-    def cal_dew_point_temperature(self, T_F, RH):
-        # constants for the August-Roche-Magnus approximation
-        a = 17.625
-        b = 243.04   
-        # convert temperature from Fahrenheit to Celsius
-        T_C = (T_F - 32) / 1.8
-        # calculate the dew point temperature in Celsius
-        alpha = np.log(RH / 100.0) + (a * T_C) / (b + T_C)
-        T_dew_C = (b * alpha) / (a - alpha)
+    sp_default = 58 # default setpoint if control algo doesn't work
+    sp_trim = 0.2
+    sp_res  = -0.3
+    sp_res_max = -1.0
+    sat_min = 55 
+    sat_max = 65
+                
+    # pick algorithm
+    if date.today() in rand_dates_Baseline:
+        algo = 0 # baseline
+    elif date.today() in rand_dates_G36:
+        algo = 1 # G36
+    elif date.today() in rand_dates_CORE:
+        algo = 2 # CORE      
+    else:
+        raise ValueError("Today is not in any of the rand rates")
     
-        # convert dew point temperature back to Fahrenheit
-        T_dew_F = T_dew_C * 1.8 + 32
-        
-        return T_dew_F
-  
-    def get_new_satsp(self):
-        try:
-            self.requests.update()
-            # update setpoint temp limits based on outside air temperature
-            
-            # calculate the new supply air temp setpoint with the new setpoint limits
-            # min SAT setpoint
-            self.reset.SPmin = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmin_at_lo_oat, self.SPmin_at_hi_oat)                            
-            
-            # max SAT setpoint        
-            self.reset.SPmax = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmax_at_lo_oat, self.SPmax_at_hi_oat)                           
-            
-            # get new setpoint
-            new_sp = self.reset.get_new_setpoint(self.requests.R, self.sat)
+    # zone list (zones_5, zones_6, zones_7) extracted by extract_dev_ID.py
+    zones_and_ahus = [(zones_5, 'AHU_5', num_ignore_ahu5), (zones_6, 'AHU_6', num_ignore_ahu6), (zones_7, 'AHU_7', num_ignore_ahu7)]
 
-            return new_sp
+    for zones, ahu, num_ignore in zones_and_ahus:
+                
+        # instantiate temp requests objects
+        temperature_requests = zone_requests.Temperature(verbose=False, folder_dir = folder_dir, zone_dev_map = devID_zoneID, zone_names=zones,                                                 
+                                                         flow=flow, flow_min=flow_min, flow_max=flow_max, clg_setpoint=clg_setpoint,
+                                                         room_temp=room_temp, low_temp_cutoff = 72.0, high_temp_cutoff = 75.0)
+                                                        
+        # instantiate the reset object
+        temperature_reset = reset.Reset(SPmin=sat_min, SPmax=sat_max, num_ignore=num_ignore, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max)
+
+        # G36 and CORE calculations will run whatever the date
+        # but will only overwrite the csv depending on the algo sequence number
         
-        except Exception as e:
-            print(e)
-            print("Error encountered. Writing the default setpoint: %s"%str(self.SP0))
-            time.sleep(20)
-    
-    def get_new_satsp_humd(self, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt):
-        try:
-          self.requests.update()
-          # update setpoint temp limits based on outside air temperature
-          # min SAT setpoint
-          self.reset.SPmin = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmin_at_lo_oat, self.SPmin_at_hi_oat)                                    
-          
-          # max SAT setpoint
-          reset_SPmax = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmax_at_lo_oat, self.SPmax_at_hi_oat)                           
-          oa_dpwt = self.cal_dew_point_temperature(self.current_oat, self.current_oarh)
-          humd_SPmax = self.calc_sp_limit(oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)              
-          
-          self.reset.SPmax = min(reset_SPmax, humd_SPmax)
-          
-          # get new setpoint
-          new_sp = self.reset.get_new_setpoint(self.requests.R, self.sat)
-               
-          return new_sp
-          
-        except Exception as e:
-            print(e)
-            print("Error encountered. Writing the default setpoint: %s"%str(self.SP0))
-            time.sleep(20)
-    
-    def calc_sp_limit(self, current_oat, lo_oat, hi_oat, val_at_lo_oat, val_at_hi_oat):
-      # calculate the 
-      if current_oat <=lo_oat:        
-        rv = val_at_lo_oat
-      elif current_oat >= hi_oat:
-        rv = val_at_hi_oat
-      else:
-        # linearly interpolate
-        val_range = val_at_hi_oat-val_at_lo_oat
-        oat_range = hi_oat-lo_oat
-        rv = val_at_lo_oat +  val_range *(current_oat-lo_oat)/oat_range
-      return rv  
-  
-    def save_data_bydate(self, data2save, header, folder_dir, ahu_name):
-        # get the current date to name the file
-        date_str = datetime.now().strftime('%Y-%m-%d')
-        filename = os.path.join(self.folder_dir, 'log', self.ahu_name, f"G36_{self.ahu_name}_{date_str}.csv" )
+        ###
+        ## G36 control
+        ###
+        # SP limits based on oat
+        sp_min_at_lo_oat = 55
+        sp_max_at_lo_oat = 65
+        sp_min_at_hi_oat = 55
+        sp_max_at_hi_oat = 55
+        lo_oat = 60
+        hi_oat = 70
         
-        # create the CSV file if it doesn't exist
-        if not os.path.exists(filename):
-            # create nested folders
-            os.makedirs(os.path.join(self.folder_dir, 'log', self.ahu_name), exist_ok=True)
-            with open(filename, mode='w', newline='') as file:
-                writer = csv.writer(file)
-                header.insert(0, 'TimeStamp')
-                writer.writerow(header)
-    
-        # save data with the current timestamp
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
-        with open(filename, mode='a', newline='') as file:
-            writer = csv.writer(file)
-            data2save.insert(0, timestamp)
-            writer.writerow(data2save)
-                            
-    def log_data(self, newdata, ahu_data_AV, new_ahu_data_AV):
-        var_in_csv = newdata[3]
-        if not any(var_in_csv in item for item in ahu_data_AV['Object_Name']):
-            new_nparry = np.array([newdata], dtype=new_ahu_data_AV.dtype)                                                         
-            new_ahu_data_AV = np.append(new_ahu_data_AV, new_nparry)
+        g36_control = G36(algo=algo, folder_dir=folder_dir, ahu_dev_map=devID_ahuID, zone_requests=temperature_requests, reset=temperature_reset, num_ignore=num_ignore, 
+                          ahu_name=ahu, SP0=sp_default, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max, lo_oat=lo_oat, hi_oat=hi_oat,
+                          SPmin_at_lo_oat=sp_min_at_lo_oat, SPmax_at_lo_oat=sp_max_at_lo_oat, SPmin_at_hi_oat=sp_min_at_hi_oat, SPmax_at_hi_oat = sp_max_at_hi_oat,
+                          )
+                          
+        g36_sat = g36_control.get_new_satsp()
+        # g36_sat = g36_control.get_new_satsp_humd(55, 60, 65, 58)
+        
+        ###
+        ## CORE control
+        ###
+        diff_sat = [-0.5, 0, 0.5]
+        # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
+        dehumd_limits = (55, 60, 65, 58)
+        dehumid = True
+        
+        core_control = CORE(algo=algo, core_version=core_version, dehumid=dehumid, dehumd_limits=dehumd_limits, g36_sat=g36_sat, folder_dir=folder_dir, zone_names=zones, ahu_name=ahu,        
+                            zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID, pump_dev_map=devID_pumpID,
+                            flow=flow, flow_min=flow_min, flow_max=flow_max, zone_requests=temperature_requests, reset=temperature_reset, 
+                            ahu_dev_map=devID_ahuID, num_ignore=num_ignore, diff_sat=diff_sat, SP0=sp_default, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max,                    
+                            )
+        
+        core_sat = core_control.get_new_satsp()
+        
+        if algo == 0:
+            print('# Baseline control used')
             
-        else:
-            idx_find = [np.char.find(ahu_data_AV['Object_Name'], var_in_csv)>=0][0]
-            new_ahu_data_AV['Present_Value'][idx_find] = newdata[-2]
+    # move algo values into AV_3050090.csv
+    filtered_rows  = []
+    for _, value in devID_ahuID.items():
+        out_csv = os.path.join(folder_dir, f'AV_{value}_out.csv')
+        data = np.genfromtxt(out_csv, delimiter=',', dtype=str, encoding='utf-8')
         
-        return new_ahu_data_AV
+        # Extract rows where the "instance" column contains '99999'
+        rows = data[data[:, 2] == '9999999', :]
+        if rows.size > 0:
+            filtered_rows.append(rows)
+                
+    # Combine filtered data with the header
+    if filtered_rows:
+        header = ('# device', 'objecttype', 'instance', 'Object_Name', 'Present_Value', 'Units')
+        filtered_data = np.vstack([header] + filtered_rows)
+    
+        # Save to a new CSV file
+        output_path =  os.path.join(folder_dir, 'AV_3050090_out.csv')
+        np.savetxt(output_path, filtered_data, delimiter=",", fmt="%s")
+    
+        # Provide the file for download
+        output_path
+    else:
+        output_path = "No matching rows found."
+        
