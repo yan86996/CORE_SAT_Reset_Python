@@ -122,7 +122,7 @@ if __name__=='__main__':
     
     # Combine filtered data with the header
     if filtered_rows:
-        header = ('# device', 'objecttype', 'instance', 'Object_Name', 'Present_Value', 'Units')
+        header = ('device','object-type','instance', 'Object_Name', 'Present_Value', 'Units')
         filtered_data = np.vstack([header] + filtered_rows)
         
         filtered_data[1:, 2] = np.arange(10001, 10001 + len(filtered_data) -1)
