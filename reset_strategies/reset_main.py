@@ -126,8 +126,7 @@ if __name__=='__main__':
         filtered_data = np.vstack([header] + filtered_rows)
         
         filtered_data[1:, 2] = np.arange(10001, 10001 + len(filtered_data) -1)
-        filtered_data[filtered_data == '/'] = ''
-        
+        filtered_data[:, -1] = ''
         # Save to a new CSV file
         output_path =  os.path.join(folder_dir, 'AV_3050090_out.csv')
         np.savetxt(output_path, filtered_data, delimiter=",", fmt="%s")
