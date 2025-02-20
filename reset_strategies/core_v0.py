@@ -71,17 +71,17 @@ class CORE:
         # cur sat setpoint
         self.cur_satsp = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], self.satsp_name) >= 0][0]
         self.ts_data.append(self.cur_satsp) # log 
-        self.ts_header.append('current SAT setpoint') # log 
+        self.ts_header.append('cur SAT setpoint') # log 
        
         # cur oat
         self.cur_oat = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Outside Air Temperature') >= 0][0]
         self.ts_data.append(self.cur_oat) # log 
-        self.ts_header.append('current outdoor temp') # log        
+        self.ts_header.append('outdoor temp') # log        
         
         # cur oa rh
         cur_oarh = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Outside Air Humidity') >= 0][0]
         self.ts_data.append(cur_oarh) # log 
-        self.ts_header.append('current outdoor air RH') # log
+        self.ts_header.append('outdoor air RH') # log
         
         # cal oa dewpoint
         self.cur_oa_dpwt = self.cal_dew_point_temperature(self.cur_oat, cur_oarh)
@@ -96,12 +96,12 @@ class CORE:
             # cur sat
             self.cur_sat = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Supply Air Temperature') >= 0][0] 
             self.ts_data.append(self.cur_sat) # log
-            self.ts_header.append('current SAT') # log
+            self.ts_header.append('cur SAT') # log
                   
             # mat
             self.mat = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Mixed Air Temperature') >= 0][0]
             self.ts_data.append(self.mat) # log 
-            self.ts_header.append('current MAT') # log
+            self.ts_header.append('MAT') # log
             
             # supply air RH
             sa_rh = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Supply Air Humidity') >= 0][0]       
@@ -137,7 +137,7 @@ class CORE:
         
         # oa damper
         self.oa_damper = ahu_data_AO['Present_Value'][np.char.find(ahu_data_AO['Object_Name'], 'Outside Air Damper') >= 0][0]
-        self.ts_data.append(self.oa_damper) # log 
+        self.ts_data.append(self.oa_damper) # log
         self.ts_header.append('outside air damper') # log
                
         # sat changes
@@ -161,7 +161,6 @@ class CORE:
                 sf_power = sf_data_AV['Present_Value'][np.char.find(sf_data_AV['Object_Name'], 'POWER') >= 0][0]
                 vfd_sf_power += sf_power
                 self.ts_data.append(sf_power) # log 
-                self.ts_header.append(key + ' power(kW) ' + ahu_name) # log
             
             # get return fan(s)
             if 'RF' in key.upper():
@@ -174,9 +173,10 @@ class CORE:
                 rf_data_AV = np.genfromtxt(rf_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
                 rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], 'POWER') >= 0][0]
                 vfd_rf_power += rf_power
-                self.ts_data.append(rf_power) # log 
-                self.ts_header.append(key + ' power(kW) '+ ahu_name) # log
-                
+                self.ts_data.append(rf_power) # log
+        
+        self.ts_header.append(ahu_name + key + ' power(kW) ') # log
+
         self.vfd_sf_power = vfd_sf_power  # KW
         self.vfd_rf_power = vfd_rf_power  # KW
              
@@ -255,13 +255,14 @@ class CORE:
                 diff_sat = candidate_sat - self.cur_satsp
                 
                 # estimate power consumption values under different setpoints    
-                self.estimate_power(self.cur_satsp, diff_sat)
+                self.estimate_power(self.cur_satsp, diff_sat)         
                 
-                # TO CHANGE
-                elec_price = 0.2 # util_rate.price(datetime_obj, 2)
+                # util_rate.price(datetime_obj, 2)
+                elec_price = 0.2 # TO CHANGE                
+                steam_price = (51.972/1000)
                 
-                self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 * 18 * (51.972/1000) # steam (950 BTU/lb); 0.7 COP = 18 lbs/ ton of clg
-                self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 / 950 * (51.972/1000)
+                self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 * 18 * steam_price # 0.7 COP = 18 lbs/ ton of clg
+                self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 / 950 * steam_price  # steam (950 BTU/lb)
                 self.estimations['fan_cost_delta'] = elec_price * self.estimations['fan_power_delta']
                 self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']
                 
@@ -345,9 +346,9 @@ class CORE:
         new_ahu_data_AV = self.log_data(new_clgcoil_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)
         
         # AHU clg coil hist
-        new_clgcoil_tempchg_data = ('3050090', 'analog-value', '9999999', 'chw_coils_hist_' + self.ahu_name, 
-                                    self.estimations['chw_coils_hist_' + self.ahu_name], '/')
-        new_ahu_data_AV = self.log_data(new_clgcoil_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)
+        new_clgcoil_hist = ('3050090', 'analog-value', '9999999', 'chw_coils_hist_' + self.ahu_name, 
+                                    self.chw_coils_hist, '/')
+        new_ahu_data_AV = self.log_data(new_clgcoil_hist, self.ahu_data_AV, new_ahu_data_AV)
         
         # vav reheat coil
         for vav in self.vavs:
@@ -429,7 +430,7 @@ class CORE:
             # airflow
             zone_afr = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
             self.ts_data.append(zone_afr) # log
-            self.ts_header.append(vav +' air flow rate') # log
+            self.ts_header.append(vav +' airflow rate') # log
             
             # total zone afr update
             afr += zone_afr       
@@ -480,6 +481,16 @@ class CORE:
             self.ts_data.append(reheat_pos) # log 
             self.ts_header.append(vav +' reheat valve position') # log
             
+            # airflow setpoint
+            zone_afr_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Airflow Setpoint') >= 0][0]
+            self.ts_data.append(zone_afr_sp) # log
+            self.ts_header.append(vav +' airflow setpoint') # log
+            
+            # damper position
+            zone_afr_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Damper Position') >= 0][0]
+            self.ts_data.append(zone_afr_sp) # log
+            self.ts_header.append(vav +' damper position') # log
+            
             # calculate AFR difference under different SAT setpoints
             diff_zone_afr = self.calc_diff_zone_afr(reheat_pos, cur_sat_sp, diff_sat, zone_afr, hg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
             self.estimations['diff_zone_tot_afr'] += diff_zone_afr
@@ -496,17 +507,20 @@ class CORE:
                 ### for debugging and tracking purposes only
                 if self.rhv_coils_hist['rhv_coils_hist_'+vav] > 0:
                     self.estimations['rhv_clo_temp_chg_' + vav] = ((zone_dat - self.cur_sat)*0.01) + (0.99*self.estimations['rhv_clo_temp_chg_' + vav])
-                     
+                
+                self.rhv_coils_hist['rhv_coils_hist_'+vav] += 1
+                
             else:
                 self.estimations['rhv_power_delta_' + vav] = self.calc_heat_flow(new_zone_afr, -diff_sat)  
                 self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
                
                 ### for debugging and tracking purposes only
+                self.rhv_coils_hist['rhv_coils_hist_'+vav] = 0
                 delta_T = zone_dat - self.estimations['rhv_clo_temp_chg_' + vav] - (cur_sat_sp + diff_sat)
                 diff_rhv_power = self.calc_heat_flow(new_zone_afr, delta_T)
                 self.ts_data += np.concatenate([arr.flatten() for arr in diff_rhv_power]).tolist() # log 
-            
-            self.ts_header += [vav+' rhv power for lo SAT', vav+' rhv power for cur SAT', vav+' rhv power for hi SAT', ] # log                                  
+                
+            self.ts_header += [vav+' rhv power for lo SAT (BTU/h)', vav+' rhv power for cur SAT', vav+' rhv power for hi SAT', ] # log                                  
                                              
         diff_afr = self.estimations['diff_zone_tot_afr']
         afr_ratio = (afr + diff_afr)/afr
@@ -530,15 +544,14 @@ class CORE:
         if self.ccv == 0: 
             # valve closed during look-back window
             if self.chw_coils_hist > 0:
-                # update coil closed temp cahnge and return heat flow estimate of zero
+                # update coil closed temp change and return heat flow estimate of zero
                 self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] = ((self.cur_sat - self.mat)*0.01) + (0.99*self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name])
             
             # update trend/hist values
-            self.estimations['chw_coils_hist_' + self.ahu_name]  = 1
+            self.chw_coils_hist += 1
             self.estimations['chw_power_delta_' + self.ahu_name] = np.zeros(len(diff_sat))
             
             self.ts_data += [0, 0, 0] # log 
-            self.ts_header += [' chw power for lo SAT', ' chw power for cur SAT', ' chw power for hi SAT', ] # log
             
         else:
             # return heat flow estimate for each candidate sat
@@ -552,12 +565,12 @@ class CORE:
             # clg coil power
             diff_chw_power = np.maximum(0.0, -self.calc_heat_flow(afr + diff_afr, diff_ahu_temp))           
             self.ts_data += np.concatenate([arr.flatten() for arr in diff_chw_power]).tolist() # log 
-            self.ts_header += [' chw power for lo SAT', ' chw power for cur SAT', ' chw power for hi SAT', ] # log
             
             # update trend/hist values
-            self.estimations['chw_coils_hist_' + self.ahu_name] = 1
+            self.chw_coils_hist = 0
             self.estimations['chw_power_delta'] = diff_chw_power - curr_chw_power
-
+        
+        self.ts_header += [' chw power for lo SAT (BTU/h)', ' chw power for cur SAT (BTU/h)', ' chw power for hi SAT (BTU/h)', ] # log
         self.estimations['diff_sat'] = diff_sat
     
     def log_data(self, newdata, ahu_data_AV, new_ahu_data_AV):
