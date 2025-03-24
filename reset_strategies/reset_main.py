@@ -13,24 +13,17 @@ if __name__=='__main__':
     import reset
     import zone_requests
     from g36 import G36
-    from core_v0 import CORE
+    from core_v1 import CORE
     
     ###
-    ## loading the mapping dictionary processed data
+    ## loading the mapping dictionary (processed) data
     ###
     from mapping_data import *
     from rand_dates import *
     
     # initialization
     folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test2'))
-    
-    damper = 'Damper Position'
-    flow = 'Airflow'
-    flow_min = 'Minimum Airflow Setpoint'
-    flow_max = 'Maximum Airflow Setpoint'
-    room_temp = 'Space Temperature'
-    clg_setpoint = 'Cooling Setpoint'
-    core_version = 'v0'
+    core_version = 'v1'
 
     # trim and respond logic params
     # AHU5:26 zones, AHU6:42 zones, AHU7: 58 zones
@@ -59,9 +52,15 @@ if __name__=='__main__':
     for zones, ahu, num_ignore in zones_and_ahus:
                 
         # instantiate temp requests objects
-        temperature_requests = zone_requests.Temperature(verbose=False, folder_dir = folder_dir, zone_dev_map = devID_zoneID, zone_names=zones,                                                 
-                                                         flow=flow, flow_min=flow_min, flow_max=flow_max, clg_setpoint=clg_setpoint,
-                                                         room_temp=room_temp, low_temp_cutoff = 72.0, high_temp_cutoff = 75.0)
+        clg_requests = zone_requests.Clg_Request(verbose=False, folder_dir = folder_dir, zone_dev_map = devID_zoneID, zone_names=zones,                                                 
+                                                         flow='Airflow', flow_min='Minimum Airflow Setpoint', flow_max='Maximum Airflow Setpoint', 
+                                                         clg_setpoint='Cooling Setpoint', htg_setpoint='Heating Setpoint', room_temp='Space Temperature', 
+                                                         low_temp_cutoff = 72.0, high_temp_cutoff = 75.0)
+        
+        htg_requests = zone_requests.Htg_Request(verbose=False, folder_dir = folder_dir, zone_dev_map = devID_zoneID, zone_names=zones,                                                 
+                                                         flow='Airflow', flow_min='Minimum Airflow Setpoint', flow_max='Maximum Airflow Setpoint', 
+                                                         clg_setpoint='Cooling Setpoint', htg_setpoint='Heating Setpoint', room_temp='Space Temperature', 
+                                                         low_temp_cutoff = 72.0, high_temp_cutoff = 75.0)
                                                         
         # instantiate the reset object
         temperature_reset = reset.Reset(SPmin=sat_min, SPmax=sat_max, num_ignore=num_ignore, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max)
@@ -80,7 +79,7 @@ if __name__=='__main__':
         lo_oat = 60
         hi_oat = 70
         
-        g36_control = G36(algo=algo, folder_dir=folder_dir, ahu_dev_map=devID_ahuID, zone_requests=temperature_requests, reset=temperature_reset, num_ignore=num_ignore, 
+        g36_control = G36(algo=algo, folder_dir=folder_dir, ahu_dev_map=devID_ahuID, zone_requests=clg_requests, reset=temperature_reset, num_ignore=num_ignore, 
                           ahu_name=ahu, SP0=sp_default, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max, lo_oat=lo_oat, hi_oat=hi_oat,
                           SPmin_at_lo_oat=sp_min_at_lo_oat, SPmax_at_lo_oat=sp_max_at_lo_oat, SPmin_at_hi_oat=sp_min_at_hi_oat, SPmax_at_hi_oat = sp_max_at_hi_oat,
                           )
@@ -92,20 +91,18 @@ if __name__=='__main__':
         ## CORE control
         ###
         diff_sat = [-0.5, 0, 0.5]
-        # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
-        dehumd_limits = (55, 60, 65, 58)
+        dehumd_limits = (55, 60, 65, 58) # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
         dehumid = True
         
         core_control = CORE(algo=algo, core_version=core_version, dehumid=dehumid, dehumd_limits=dehumd_limits, g36_sat=g36_sat, folder_dir=folder_dir, zone_names=zones, ahu_name=ahu,        
-                            zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID, pump_dev_map=devID_pumpID,
-                            flow=flow, flow_min=flow_min, flow_max=flow_max, zone_requests=temperature_requests, reset=temperature_reset, 
-                            ahu_dev_map=devID_ahuID, num_ignore=num_ignore, diff_sat=diff_sat, SP0=sp_default, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max,                    
-                            )
+                            zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID, pump_dev_map=devID_pumpID, ahu_dev_map=devID_ahuID,
+                            zone_requests=(clg_requests, htg_requests), reset=temperature_reset, num_ignore=num_ignore, diff_sat=diff_sat,                   
+                            )                     
         
         core_sat = core_control.get_new_satsp()
         
         if algo == 0:
-            print('# Baseline control used')
+            print('### Baseline control used ###')
             
     # move algo values into AV_3050090.csv
     filtered_rows  = []
@@ -126,8 +123,7 @@ if __name__=='__main__':
         filtered_data = np.vstack([header] + filtered_rows)
         
         filtered_data[1:, 2] = np.arange(10001, 10001 + len(filtered_data) -1)
-        filtered_data[1:, -1] = ''
-        
+        filtered_data[:, -1] = ''
         # Save to a new CSV file
         output_path =  os.path.join(folder_dir, 'AV_3050090_out.csv')
         np.savetxt(output_path, filtered_data, delimiter=",", fmt="%s")
