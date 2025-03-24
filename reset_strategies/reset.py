@@ -16,13 +16,8 @@ class Reset:
     SPres	Respond amount
     SPres-max	Maximum response per time interval
     """
-    """
-    @author Paul Raftery <p.raftery@berkeley.edu>
-    """
-    def __init__(self,
-                 SPmin=0.5, SPmax=2.5,
-                 num_ignore=2, SPtrim=-0.1,
-                 SPres=0.15, SPres_max=0.35):
+    
+    def __init__(self, SPmin=None, SPmax=None, num_ignore=None, SPtrim=None, SPres=None, SPres_max=None):        
         self.SPmin = SPmin
         self.SPmax = SPmax
         self.num_ignore = num_ignore
@@ -30,9 +25,9 @@ class Reset:
         self.SPres = SPres
         self.SPres_max = SPres_max
             
-    def get_new_setpoint(self, R, SP, verbose=False):
+    def get_new_sp_clg(self, R, SP, verbose=False):
         """ R = number of requests, weighted by zone importance"""
-        #calculate the response
+        # calculate the response
         response = self.SPtrim + self.SPres * max(R - self.num_ignore,0.0)
         
         # limit the response per timestep to SPres_max
@@ -41,6 +36,22 @@ class Reset:
         
         rv = SP + response
         # Ensure the setpoint stays within the desired range
+        rv = self.SPmin if rv < self.SPmin else rv
+        rv = self.SPmax if rv > self.SPmax else rv
+
+        return rv
+    
+    def get_new_sp_htg(self, R, SP, verbose=False):
+        """ R = number of requests, weighted by zone importance"""
+        #calculate the response
+        response = -self.SPtrim - self.SPres * max(R - self.num_ignore,0.0)
+        
+        # limit the response per timestep to SPres_max
+        response = -self.SPres_max if abs(response) > \
+                   abs(self.SPres_max) else response
+        
+        rv = SP + response
+        # Ensure the setpoint stays up to 68F for heating requests
         rv = self.SPmin if rv < self.SPmin else rv
         rv = self.SPmax if rv > self.SPmax else rv
 
