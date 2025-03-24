@@ -6,13 +6,14 @@ from datetime import datetime
 import numpy as np
 import util_rate
 import pdb 
-# import zone_requests, reset
+#######
+### Changes to V1 
+### Add Heating Request to AHU power estimation
+#######
 
 class CORE:
-    def __init__(self, algo=None, core_version=None, dehumid=None, folder_dir=None,  dehumd_limits=None, g36_sat=None, 
-                 zone_dev_map=None, vdf_dev_map=None, ahu_dev_map=None, pump_dev_map=None, 
-                 zone_names=None, ahu_name=None, flow=None, flow_min=None, flow_max=None, zone_requests=None, reset=None,          
-                 num_ignore=None, diff_sat=None, important=None, SP0=None, SPtrim=None, SPres=None, SPres_max=None,                    
+    def __init__(self, algo=None, core_version=None, dehumid=None, folder_dir=None, dehumd_limits=None, g36_sat=None, zone_dev_map=None, zone_names=None, 
+                 ahu_name=None, vdf_dev_map=None, ahu_dev_map=None, pump_dev_map=None, zone_requests=None, reset=None, num_ignore=None, diff_sat=None,                              
                  ):
         self.algo = algo
         self.core_version = core_version
@@ -24,13 +25,19 @@ class CORE:
         self.ts_data = []
         self.ts_header = []
         
-        # zone_requests is an instantiated temp request object
-        self.requests = zone_requests 
-        self.ts_data.append(self.requests.R) # log
-        self.ts_header.append('number of zone requests') # log
+        # cooling requests
+        self.clg_requests = zone_requests[0]        
+        self.ts_data.append(self.clg_requests.R) # log
+        self.ts_header.append('number of cooling requests') # log
+        
+        # heating requests
+        self.htg_requests = zone_requests[1]
+        self.ts_data.append(self.htg_requests.R) # log
+        self.ts_header.append('number of heating requests') # log
         
         # reset is an instantiated reset object
-        self.reset = reset    
+        self.reset = reset
+        
         # min/max sat
         self.min_sat_sp = self.reset.SPmin
         self.max_sat_sp = self.reset.SPmax
@@ -40,14 +47,9 @@ class CORE:
         self.ts_header.append('max SAT') # log
         
         self.num_ignore = num_ignore
-        self.SPtrim = SPtrim
-        self.SPres = SPres
-        self.SPres_max = SPres_max
-        self.important = important
         self.vavs = zone_names
-        self.flow = flow
-        self.flow_min = flow_min
-        self.flow_max = flow_max
+        self.flow_min = 'Minimum Airflow Setpoint'
+        self.flow_max = 'Maximum Airflow Setpoint'
         self.zone_dev_map = zone_dev_map
         self.satsp_name = 'Supply Air Setpoint'
         self.dehumd_limits = dehumd_limits
@@ -70,23 +72,28 @@ class CORE:
         
         # cur sat setpoint
         self.cur_satsp = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], self.satsp_name) >= 0][0]
-        self.ts_data.append(self.cur_satsp) # log 
-        self.ts_header.append('cur SAT setpoint') # log 
+        self.ts_data.append(self.cur_satsp) # log
+        self.ts_header.append('cur SAT setpoint') # log
+        
+        # cur rat setpoint
+        cur_ratsp = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Return Air Setpoint') >= 0][0]
+        self.ts_data.append(cur_ratsp) # log
+        self.ts_header.append('cur RAT setpoint') # log 
        
         # cur oat
         self.cur_oat = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Outside Air Temperature') >= 0][0]
-        self.ts_data.append(self.cur_oat) # log 
-        self.ts_header.append('outdoor temp') # log        
+        self.ts_data.append(self.cur_oat) # log
+        self.ts_header.append('outdoor temp') # log   
         
         # cur oa rh
         cur_oarh = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Outside Air Humidity') >= 0][0]
-        self.ts_data.append(cur_oarh) # log 
+        self.ts_data.append(cur_oarh) # log
         self.ts_header.append('outdoor air RH') # log
         
         # cal oa dewpoint
         self.cur_oa_dpwt = self.cal_dew_point_temperature(self.cur_oat, cur_oarh)
-        self.ts_data.append(self.cur_oa_dpwt) # log 
-        self.ts_header.append('calculated outdoor air dewpoint') # log  
+        self.ts_data.append(self.cur_oa_dpwt) # log
+        self.ts_header.append('calculated outdoor air dewpoint') # log
 
         # from AI_XXXX.csv
         try:
@@ -103,15 +110,25 @@ class CORE:
             self.ts_data.append(self.mat) # log 
             self.ts_header.append('MAT') # log
             
+            # rat
+            rat = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Return Air Temperature') >= 0][0]
+            self.ts_data.append(rat) # log
+            self.ts_header.append('RAT') # log
+            
             # supply air RH
             sa_rh = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Supply Air Humidity') >= 0][0]       
-            self.ts_data.append(sa_rh) # log 
+            self.ts_data.append(sa_rh) # log
             self.ts_header.append('supply air RH') # log
             
             # mixed air RH
             ma_rh = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Mixed Air Humidity') >= 0][0]       
-            self.ts_data.append(ma_rh) # log 
+            self.ts_data.append(ma_rh) # log
             self.ts_header.append('mixed air RH') # log
+            
+            # return air RH
+            ra_rh = ahu_data_AI['Present_Value'][np.char.find(ahu_data_AI['Object_Name'], 'Return Air Humidity') >= 0][0]       
+            self.ts_data.append(ra_rh) # log
+            self.ts_header.append('return air RH') # log
             
         except Exception as e:
             print(e)
@@ -126,6 +143,7 @@ class CORE:
             print(e)
             print(f'Failed to find AO_{ahu_dev_ID}.csv')
         
+        # clg coil valve 
         self.ccv = ahu_data_AO['Present_Value'][np.char.find(ahu_data_AO['Object_Name'], 'Chilled Water Control Valve') >= 0][0]
         self.ts_data.append(self.ccv) # log 
         self.ts_header.append('chilled water control valve') # log
@@ -181,7 +199,6 @@ class CORE:
                 vfd_rf_power += rf_power
                 self.ts_data.append(rf_power) # log
                 self.ts_header.append(ahu_name + key + ' power(kW) ') # log
-    
 
         self.vfd_sf_power = vfd_sf_power  # KW
         self.vfd_rf_power = vfd_rf_power  # KW
@@ -241,17 +258,36 @@ class CORE:
         # calculate the feasible range of diff_sat
         candidate_sat = self.diff_sat + self.cur_satsp
         
-        if self.dehumid == True:
+        if self.dehumid:
             lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt = self.dehumd_limits
             humd_SPmax = self.calc_sp_limit(self.cur_oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)              
             self.max_sat_sp = min(self.max_sat_sp, humd_SPmax)
             self.reset.SPmax = self.max_sat_sp
-                    
-        # new sat setpoint
-        if self.requests.R > self.num_ignore:
-            # comfort constraint present
+        
+        # comfort constraint present            
+        # cooling and heating requests
+        self.clg_requests.update()
+        self.htg_requests.update()
+        
+        #  initialize cost estimates
+        self.estimations['chw_cost_delta'] = np.full(3, np.nan)
+        self.estimations['rhv_cost_delta'] = np.full(3, np.nan)
+        self.estimations['fan_cost_delta'] = np.full(3, np.nan)
+        self.estimations['tot_cost_delta'] = np.full(3, np.nan)
+        self.estimations['diff_zone_tot_afr'] = np.full(3, np.nan)
+        
+        if self.clg_requests.R > self.num_ignore:
             # use trim and respond without outside air based SAT setpoint limits
-            new_core_sat = self.reset.get_new_setpoint(self.requests.R, self.cur_sat)
+            new_core_sat = self.reset.get_new_sp_clg(self.clg_requests.R, self.cur_sat)
+            core_finish = np.nan
+            print(f'### SAT reset responds to cooling requests for {self.ahu_name} ###')
+            
+        # heating request
+        elif self.htg_requests.R > self.num_ignore:
+            # use trim and respond without outside air based SAT setpoint limits
+            new_core_sat = self.reset.get_new_sp_htg(self.htg_requests.R, self.cur_sat)
+            core_finish = np.nan
+            print(f'### SAT reset responds to heating requests for {self.ahu_name} ###')
             
         else:
             try:
@@ -267,6 +303,7 @@ class CORE:
                 elec_price = 0.2 # TO CHANGE                
                 steam_price = (51.972/1000)
                 
+                print('### No comofor request, CORE runs for {self.ahu_name} ###')
                 self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 * 18 * steam_price # 0.7 COP = 18 lbs/ ton of clg
                 self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 / 950 * steam_price  # steam (950 BTU/lb)
                 self.estimations['fan_cost_delta'] = elec_price * self.estimations['fan_power_delta']
@@ -276,7 +313,6 @@ class CORE:
                 
                 # no comfort constraint present
                 new_core_sat = self.cur_satsp + diff_sat[idx_opt]
-                
                 core_finish = 1
             
             except Exception as e:
@@ -305,25 +341,28 @@ class CORE:
         new_ahu_data_AV = self.ahu_data_AV.copy()
         idx_find = [np.char.find(self.ahu_data_AV['Object_Name'], self.satsp_name)>=0][0]
         
-        # write G36 new sat setpoint if algo == 1
+        # write G36 new sat setpoint
         if self.algo == 1:
             algo_finish = g36_finish
             new_ahu_data_AV['Present_Value'][idx_find] = self.g36_sat
-            print(f'# G36 control used: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}')
-
-        # write CORE new sat setpoint if algo == 2
+            print(f'# G36 picked for today: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}°F')
+                  
+        # write CORE new sat setpoint 
         elif self.algo == 2:
             algo_finish = core_finish
             new_ahu_data_AV['Present_Value'][idx_find] = new_core_sat
-            print(f'# CORE control used: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}')         
+            print(f'# CORE picked for today: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}°F')         
         
-        # default ctrl used 
+        # default control used 
         else:
             algo_finish = np.nan
-            
+            print('# baseline control used')
+                  
+        print('-' * 30)
+        
         ###### 
         ### logging data points including trending variables
-        ###### 
+        ######
         # algo num
         algo_array = ('3050090', 'analog-value', '9999999', 'algo to choose for ' + self.ahu_name, self.algo,'/')
         new_ahu_data_AV = self.log_data(algo_array, self.ahu_data_AV, new_ahu_data_AV)
@@ -352,8 +391,8 @@ class CORE:
         new_ahu_data_AV = self.log_data(new_clgcoil_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)
         
         # AHU clg coil hist
-        new_clgcoil_hist = ('3050090', 'analog-value', '9999999', 'chw_coils_hist_' + self.ahu_name, 
-                                    self.chw_coils_hist, '/')
+        new_clgcoil_hist = ('3050090', 'analog-value', '9999999', 'chw_coils_hist_' + self.ahu_name, self.chw_coils_hist, '/')
+                                    
         new_ahu_data_AV = self.log_data(new_clgcoil_hist, self.ahu_data_AV, new_ahu_data_AV)
         
         # vav reheat coil
@@ -442,7 +481,7 @@ class CORE:
             self.ts_header.append(vav +' DAT') # log
             
             # airflow
-            zone_afr = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
+            zone_afr = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], 'Airflow') >= 0][0]
             self.ts_data.append(zone_afr) # log
             self.ts_header.append(vav +' airflow rate') # log
             
@@ -525,7 +564,7 @@ class CORE:
                 self.rhv_coils_hist['rhv_coils_hist_'+vav] += 1
                 
             else:
-                self.estimations['rhv_power_delta_' + vav] = self.calc_heat_flow(new_zone_afr, -diff_sat)  
+                self.estimations['rhv_power_delta_' + vav] = self.calc_heat_flow(new_zone_afr, -diff_sat)
                 self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
                
                 ### for debugging and tracking purposes only
@@ -555,16 +594,15 @@ class CORE:
             
         # Chilled water temp change and power for each AHU under different SAT setpoints
         # estimate the inherent temperature change between in & out temperature    
-        if self.ccv == 0: 
+        if (self.ccv == 0) and (self.hcv == 0): 
             # valve closed during look-back window
-            if (self.chw_coils_hist > 0) and (self.hcv == 0):
+            if self.chw_coils_hist > 0:
                 # update coil closed temp change and return heat flow estimate of zero
                 self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] = ((self.cur_sat - self.mat)*0.01) + (0.99*self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name])
             
             # update trend/hist values
             self.chw_coils_hist += 1
             self.estimations['chw_power_delta_' + self.ahu_name] = np.zeros(len(diff_sat))
-            
             self.ts_data += [0, 0, 0] # log 
             
         else:
