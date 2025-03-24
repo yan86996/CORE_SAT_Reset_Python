@@ -19,7 +19,7 @@ class G36:
         self.SP0 = SP0 # default setpoint if control algo doesn't work
         self.lo_oat = lo_oat
         self.hi_oat = hi_oat
-        self.requests = zone_requests # zone_requests is an instantiated temp request object
+        self.clg_requests = zone_requests
         self.reset = reset # reset is an instantiated reset object
         self.num_ignore = num_ignore
         self.SPtrim = SPtrim
@@ -36,7 +36,7 @@ class G36:
         self.ahu_data_AV_header = ahu_data_AV.dtype.names
     
         # current sat setpoint
-        self.sat = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Supply Air Setpoint') >= 0][0]
+        self.cur_sat = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Supply Air Setpoint') >= 0][0]
         
         # current oat
         self.current_oat = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Outside Air Temperature') >= 0][0]
@@ -62,7 +62,7 @@ class G36:
     def get_new_satsp(self):
         
         try:
-            self.requests.update()
+            self.clg_requests.update()
             # update setpoint temp limits based on outside air temperature
             
             # calculate the new supply air temp setpoint with the new setpoint limits
@@ -70,43 +70,42 @@ class G36:
             self.reset.SPmin = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmin_at_lo_oat, self.SPmin_at_hi_oat)                            
             
             # max SAT setpoint        
-            self.reset.SPmax = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmax_at_lo_oat, self.SPmax_at_hi_oat)                           
-            
-            # get new setpoint
-            new_sp = self.reset.get_new_setpoint(self.requests.R, self.sat)
-        
+            self.reset.SPmax = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmax_at_lo_oat, self.SPmax_at_hi_oat)
+
+            # use trim and respond without outside air based SAT setpoint limits
+            new_sp = self.reset.get_new_sp_clg(self.clg_requests.R , self.cur_sat)
+
         except Exception as e:
-            
-            new_sp = np.nan
+            new_sp = self.SP0
             print(e)
-            print("Error encountered. Writing the default setpoint")
+            print("Error encountered. Writing the default setpoint: %s"%str(self.SP0))
         
         return new_sp
     
     def get_new_satsp_humd(self, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt):
         try:
-          self.requests.update()
-          # update setpoint temp limits based on outside air temperature
-          # min SAT setpoint
-          self.reset.SPmin = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmin_at_lo_oat, self.SPmin_at_hi_oat)                                    
-          
-          # max SAT setpoint
-          reset_SPmax = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmax_at_lo_oat, self.SPmax_at_hi_oat)                           
-          oa_dpwt = self.cal_dew_point_temperature(self.current_oat, self.current_oarh)
-          humd_SPmax = self.calc_sp_limit(oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)              
-          
-          self.reset.SPmax = min(reset_SPmax, humd_SPmax)
-          
-          # get new setpoint
-          new_sp = self.reset.get_new_setpoint(self.requests.R, self.sat)
-               
-          return new_sp
+            self.clg_requests.update()
+            # update setpoint temp limits based on outside air temperature
+            # min SAT setpoint
+            self.reset.SPmin = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmin_at_lo_oat, self.SPmin_at_hi_oat)                                    
+            
+            # max SAT setpoint
+            reset_SPmax = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmax_at_lo_oat, self.SPmax_at_hi_oat)                           
+            oa_dpwt = self.cal_dew_point_temperature(self.current_oat, self.current_oarh)
+            humd_SPmax = self.calc_sp_limit(oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)              
+            
+            self.reset.SPmax = min(reset_SPmax, humd_SPmax)
+            
+            # use trim and respond without outside air based SAT setpoint limits
+            new_sp = self.reset.get_new_sp_clg(self.clg_requests.R , self.cur_sat)
           
         except Exception as e:
+            new_sp = self.SP0
             print(e)
             print("Error encountered. Writing the default setpoint: %s"%str(self.SP0))
-            time.sleep(20)
-    
+        
+        return new_sp
+
     def calc_sp_limit(self, current_oat, lo_oat, hi_oat, val_at_lo_oat, val_at_hi_oat):
       # calculate the 
       if current_oat <=lo_oat:        
