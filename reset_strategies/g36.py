@@ -1,22 +1,23 @@
-import os, csv, sys
+import os, csv, sys, glob
 from datetime import datetime
 import numpy as np
 import time
 # import zone_requests, reset
 
 class G36:
-    def __init__(self, algo=None, folder_dir=None, oat_name=None, oarh_name=None, zone_requests=None, reset=None, ahu_dev_map=None, 
+    def __init__(self, algo=None, max_off_time=None, folder_dir=None, oat_name=None, oarh_name=None, zone_requests=None, reset=None, ahu_dev_map=None, 
                  num_ignore=None, important=None, ahu_name=None, SP0=None, SPtrim=None, SPres=None, SPres_max=None, 
                  lo_oat=None, hi_oat=None, SPmin_at_lo_oat=None, SPmax_at_lo_oat=None, SPmin_at_hi_oat=None, SPmax_at_hi_oat=None, 
                  ):
         self.algo = algo
+        self.max_off_time = max_off_time
         self.folder_dir = folder_dir
         self.ahu_name = ahu_name
         self.SPmin_at_lo_oat = SPmin_at_lo_oat
         self.SPmax_at_lo_oat = SPmax_at_lo_oat
         self.SPmin_at_hi_oat = SPmin_at_hi_oat
         self.SPmax_at_hi_oat = SPmax_at_hi_oat
-        self.SP0 = SP0 # default setpoint if control algo doesn't work
+        # self.SP0 = SP0 # default setpoint if control algo doesn't work
         self.lo_oat = lo_oat
         self.hi_oat = hi_oat
         self.clg_requests = zone_requests
@@ -58,14 +59,44 @@ class G36:
         T_dew_F = T_dew_C * 1.8 + 32
         
         return T_dew_F
-  
-    def get_new_satsp(self):
+
+    def get_last_good_SAT(self):
+        folder_path = os.path.join(self.folder_dir, 'log', self.ahu_name)
+        csv_files = glob.glob(os.path.join(folder_path, '*.csv'))
+        # sort files by modification time (most recent first)
+        csv_files.sort(key=os.path.getmtime, reverse=True)
         
+        now = datetime.now()
+        if now.hour > 1:
+            lastest_file = csv_files[0]
+        else:
+            try:
+                lastest_file = csv_files[1] # get yesteday's csv        
+            except Exception as e:
+                print(e)
+                print('no csv from yesteday')
+                    
+        last_G36_row = None
+        with open(lastest_file, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['g36 finished'] != '-1':
+                    last_G36_row = row
+
+        # G36
+        last_G36_SAT = last_G36_row['G36 satsp ' + self.ahu_name]
+        last_G36_time = last_G36_row['TimeStamp']
+        dt_G36 = datetime.strptime(last_G36_time, '%Y-%m-%d %H:%M')
+        time_G36_lapesd = (now - dt_G36).total_seconds()/3600
+        
+        return last_G36_SAT, time_G36_lapesd  
+    
+    def get_new_satsp(self):
         try:
             self.clg_requests.update()
-            # update setpoint temp limits based on outside air temperature
-            
+            # update setpoint temp limits based on outside air temperature        
             # calculate the new supply air temp setpoint with the new setpoint limits
+            
             # min SAT setpoint
             self.reset.SPmin = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmin_at_lo_oat, self.SPmin_at_hi_oat)                            
             
@@ -75,11 +106,30 @@ class G36:
             # use trim and respond without outside air based SAT setpoint limits
             new_sp = self.reset.get_new_sp_clg(self.clg_requests.R , self.cur_sat)
 
-        except Exception as e:
-            new_sp = self.SP0
-            print(e)
-            print("Error encountered. Writing the default setpoint: %s"%str(self.SP0))
-        
+        except Exception as e:      
+            if self.algo == 1:
+                print(e)
+                
+            try: 
+                last_G36_SAT, time_G36_lapesd = self.get_last_good_SAT()
+                if time_G36_lapesd < self.max_off_time:
+                    new_sp = last_G36_SAT
+                    
+                    if self.algo == 1:
+                        print('******* G36 failed to run, and the last good SAT value was used *******')
+                else:
+                    if self.algo == 1:
+                        print('******* G36 failed to run for more than an hour *******')  
+                    # default to the baseline control
+                    new_sp = np.nan
+                
+            except Exception as e:
+                if self.algo == 1:
+                    print(e)
+                    print('******* G36 failed to run, and no good SAT value can be found *******') 
+                # default to the baseline control
+                new_sp = np.nan
+                    
         return new_sp
     
     def get_new_satsp_humd(self, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt):
@@ -100,9 +150,23 @@ class G36:
             new_sp = self.reset.get_new_sp_clg(self.clg_requests.R , self.cur_sat)
           
         except Exception as e:
-            new_sp = self.SP0
-            print(e)
-            print("Error encountered. Writing the default setpoint: %s"%str(self.SP0))
+            print(e)            
+            try: 
+                last_G36_SAT, time_G36_lapesd = self.get_last_good_SAT()
+                
+                if time_G36_lapesd < self.max_off_time:
+                    new_sp = last_G36_SAT
+                    print('******* G36 failed to run, and the last good SAT value was used *******')
+                else:
+                    print('******* G36 failed to run for more than an hour *******')
+                    # defalt to the baseline control
+                    new_sp = np.nan
+                
+            except Exception as e:
+                print(e)
+                print('******* G36 failed to run, and no good SAT value can be found *******')
+                # defalt to the baseline control
+                new_sp = np.nan
         
         return new_sp
 
