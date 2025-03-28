@@ -178,30 +178,28 @@ class CORE:
             # get supply fan(s)
             if 'SF' in key.upper():
                 try:
-                    sf_csv_AV = os.path.join(self.folder_dir, f'AV_{value}.csv')
+                    sf_csv_AV = os.path.join(self.folder_dir, 'AV_3050090.csv')
                     sf_data_AV = np.genfromtxt(sf_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
-                    sf_power = sf_data_AV['Present_Value'][np.char.find(sf_data_AV['Object_Name'], 'POWER') >= 0][0]
+                    sf_power = sf_data_AV['Present_Value'][np.char.find(sf_data_AV['Object_Name'], value) >= 0][0]
                     vfd_sf_power += sf_power
                     self.ts_data.append(sf_power) # log 
-                    self.ts_header.append(self.ahu_name + key + ' power(kW) ') # log
+                    self.ts_header.append(self.ahu_name + ' ' + key + ' power(kW) ') # log
                     
                 except Exception as e:
                     print(e)
-                    print(f'Failed to find AV_{value}.csv')
             
             # get return fan(s)
             if 'RF' in key.upper():
                 try:
-                    rf_csv_AV = os.path.join(self.folder_dir, f'AV_{value}.csv')
+                    rf_csv_AV = os.path.join(self.folder_dir, 'AV_3050090.csv')
                     rf_data_AV = np.genfromtxt(rf_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
-                    rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], 'POWER') >= 0][0]
+                    rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], value) >= 0][0]
                     vfd_rf_power += rf_power
                     self.ts_data.append(rf_power) # log
-                    self.ts_header.append(self.ahu_name + key + ' power(kW) ') # log
+                    self.ts_header.append(self.ahu_name + ' ' + key + ' power(kW) ') # log
                     
                 except Exception as e:
                     print(e)
-                    print(f'Failed to find AV_{value}.csv')
 
         self.vfd_sf_power = vfd_sf_power  # KW
         self.vfd_rf_power = vfd_rf_power  # KW
@@ -250,10 +248,9 @@ class CORE:
         
     def read_pump_power_csvs(self):    
         for key, value in self.pump_dev_map.items():
-            pump_csv = os.path.join(self.folder_dir, f'AV_{value}.csv')
-            
+            pump_csv = os.path.join(self.folder_dir, 'AV_3050090.csv')        
             pump_data_AV = np.genfromtxt(pump_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
-            pump_power = pump_data_AV['Present_Value'][np.char.find(pump_data_AV['Object_Name'], 'POWER') >= 0][0]
+            pump_power = pump_data_AV['Present_Value'][np.char.find(pump_data_AV['Object_Name'], value) >= 0][0]
             
             self.ts_data.append(pump_power) # log 
             self.ts_header.append(key + ' power(kW)') # log
@@ -484,7 +481,6 @@ class CORE:
             
             # AHU clg coil hist
             new_clgcoil_hist = ('3050090', 'analog-value', '9999999', 'chw_coils_hist_' + self.ahu_name, self.chw_coils_hist, '/')
-                                        
             new_ahu_data_AV = self.log_data(new_clgcoil_hist, self.ahu_data_AV, new_ahu_data_AV)
             
             # vav reheat coil
@@ -546,7 +542,7 @@ class CORE:
             print(e)
             print(f'******* Failed to read pump power csvs for {self.ahu_name} *******')
         
-        print('-' * 30)
+        print('-' * 80)
 
     ######
     ### Zone level calculations for reheat power and airflow under different SAT setpoints
