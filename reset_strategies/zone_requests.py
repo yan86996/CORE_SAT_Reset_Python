@@ -1,217 +1,356 @@
-import os, csv, sys, glob
+import os, sys, time, shutil, re
 from datetime import datetime
 import numpy as np
-import time
-# import zone_requests, reset
 
-class G36:
-    def __init__(self, algo=None, max_off_time=None, folder_dir=None, oat_name=None, oarh_name=None, zone_requests=None, reset=None, ahu_dev_map=None, 
-                 num_ignore=None, important=None, ahu_name=None, SP0=None, SPtrim=None, SPres=None, SPres_max=None, 
-                 lo_oat=None, hi_oat=None, SPmin_at_lo_oat=None, SPmax_at_lo_oat=None, SPmin_at_hi_oat=None, SPmax_at_hi_oat=None, 
-                 ):
-        self.algo = algo
-        self.max_off_time = max_off_time
-        self.folder_dir = folder_dir
-        self.ahu_name = ahu_name
-        self.SPmin_at_lo_oat = SPmin_at_lo_oat
-        self.SPmax_at_lo_oat = SPmax_at_lo_oat
-        self.SPmin_at_hi_oat = SPmin_at_hi_oat
-        self.SPmax_at_hi_oat = SPmax_at_hi_oat
-        # self.SP0 = SP0 # default setpoint if control algo doesn't work
-        self.lo_oat = lo_oat
-        self.hi_oat = hi_oat
-        self.clg_requests = zone_requests
-        self.reset = reset # reset is an instantiated reset object
-        self.num_ignore = num_ignore
-        self.SPtrim = SPtrim
-        self.SPres = SPres
-        self.SPres_max = SPres_max
+class Requests:
+    """ This superclass calculates the number of requests
+    for each zone
+    """
+    def __init__(self, verbose=False, ignore=[], important=[], folder_dir = None, zone_names=None, zone_dev_map = None, room_temp=None, clg_setpoint=None, htg_setpoint=None,     
+                 flow=None, flow_min=None, flow_max=None, damper=None, lim_dt_errs = 20, fdd=False, low_temp_cutoff=None, high_temp_cutoff=None):
+	           
+        self.rR = 0 # raw requests
+        self.R = 0 # importance weighted requests
+        self.ignore = ignore
         self.important = important
-        
-        # get AHU data from AV_XX.csv
-        ahu_div_ID = ahu_dev_map[ahu_name]
-        self.ahu_div_ID = ahu_div_ID
-        ahu_csv_AV = os.path.join(folder_dir, f'AV_{ahu_div_ID}.csv')
-        ahu_data_AV = np.genfromtxt(ahu_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
-        self.ahu_data_AV = ahu_data_AV
-        self.ahu_data_AV_header = ahu_data_AV.dtype.names
+        self.zone_dev_map = zone_dev_map
+        self.zd = {} # dict object representing all of the necessary zone data
+        self.missingPartial = [] # list of names of zones that are missing some required data
+        self.missingEssential = [] # list of names of zones that are missing some required data
+        self.verbose = verbose
+        self.folder_dir = folder_dir
+        self.zone_names = zone_names
+        self.room_temp = room_temp
+        self.clg_setpoint = clg_setpoint
+        self.htg_setpoint = htg_setpoint
+        self.flow = flow
+        self.flow_max = flow_max
+        self.flow_min = flow_min
+        self.damper = damper
+        self.fdd = fdd
+        self.low_temp_cutoff = low_temp_cutoff
+        self.high_temp_cutoff = high_temp_cutoff
+        self.lim_dt_errs = lim_dt_errs
     
-        # current sat setpoint
-        self.cur_sat = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Supply Air Setpoint') >= 0][0]
-        
-        # current oat
-        self.current_oat = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Outside Air Temperature') >= 0][0]
-        
-        # outdoor RH
-        self.current_oarh = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Outside Air Humidity') >= 0][0]
+    def update(self):
+        # method to be overridden depending on data
+        # required to calculate the requests
+        raise NotImplementedError
+
+    def handleAtypicalZones(self):
+        # ignore any ignored zones
+        for z in sorted(self.ignore):
+            if z in self.zd:
+                del self.zd[z]        
+        # ignore any zones missing essential data      
+        for z in sorted(self.missingEssential):
+            if z in self.zd:
+                del self.zd[z]  
+    
+    def calcTotalRequests(self):
+        # Sum up the total number of requests (and also weighted by importance)
+        self.rR = 0
+        self.R = 0
+        for z in self.zd:
+            if 'requests' in self.zd[z]:
+                self.rR += self.zd[z]['requests']
+                if 'importance' in self.zd[z]:
+                    self.R += self.zd[z]['requests'] * float(self.zd[z]['importance'])
+                else:
+                    self.R += self.zd[z]['requests']
+                
+            if 'clg_requests' in self.zd[z]:
+                self.rR += self.zd[z]['requests']
+                if 'importance' in self.zd[z]:
+                    self.R += self.zd[z]['requests'] * float(self.zd[z]['importance'])
+                else:
+                    self.R += self.zd[z]['requests']  
       
-    def cal_dew_point_temperature(self, T_F, RH):
-        # constants for the August-Roche-Magnus approximation
-        a = 17.625
-        b = 243.04   
-        # convert temperature from Fahrenheit to Celsius
-        T_C = (T_F - 32) / 1.8
-        # calculate the dew point temperature in Celsius
-        alpha = np.log(RH / 100.0) + (a * T_C) / (b + T_C)
-        T_dew_C = (b * alpha) / (a - alpha)
-    
-        # convert dew point temperature back to Fahrenheit
-        T_dew_F = T_dew_C * 1.8 + 32
-        
-        return T_dew_F
+        rv = {'raw_requests': self.rR, 
+              'weighted_requests': self.R, 
+              'ignored_zones': self.ignore, 
+              'partial_zones': self.missingPartial,
+             }
+      
+        if self.verbose:
+            print('\n================= Requests summary ================ ')
+            print('Total raw requests: ' + str(self.rR))
+            print('Total importance-weighted requests: ' + str(self.R))
+            if len(self.ignore):
+                print('Ignored zones (user selected): ')
+            if len(self.missingEssential):   
+                print('Ignored zones (due to missing essential data): ')
+            if len(self.missingPartial):  
+                print('Partial request results only (due to missing data, or a failed point): ')
+      
+        return rv
 
-    def get_last_good_SAT(self):
-        folder_path = os.path.join(self.folder_dir, 'log', self.ahu_name)
-        csv_files = glob.glob(os.path.join(folder_path, '*.csv'))
-        # sort files by modification time (most recent first)
-        csv_files.sort(key=os.path.getmtime, reverse=True)
+class Pressure(Requests):
+    """ This class calculates the number of requests
+    for a duct static pressure reset strategy according
+    to the Tailor Engineering Sequence of Operations.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(Pressure, self).__init__(*args, **kwargs)
+    
+    def update(self):
+        self.missingPartial = []
+        self.missingEssential = []
+    
+        # clear existing zone data from previous update
+        for z in self.zd:
+          if 'damper' in self.zd[z]:
+            del self.zd[z]['damper']
+          if 'flow' in self.zd[z]:
+            del self.zd[z]['flow']
+          if 'flow_max' in self.zd[z]:
+            del self.zd[z]['flow_max']      
+      
+        for zone_name in self.zone_names:
+            self.zd[zone_name] = {}
+            
+            # from AV_XXXX.csv
+            div_ID = self.zone_dev_map[zone_name]
+            zone_csv_AV = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+            zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
+            
+            # min airflow
+            min_flow = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_min) >= 0][0]
+            self.zd[zone_name]['min_flow'] = min_flow
+            # max airflow
+            max_flow = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_max) >= 0][0]
+            self.zd[zone_name]['max_flow'] = max_flow  
+            
+            # from AI_XXXX.csv
+            zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
+            zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
+            
+            # airflow
+            airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
+            self.zd[zone_name]['flow'] = airflow
+      
+        print('\n======= for pressure requests =======\n' )
+        print(self.zd)
+    
+      # calculate requests
+        for z in sorted(self.zd):
+            if 'damper' in self.zd[z]:
+                if self.zd[z]['damper'] < 95:
+                    self.zd[z]['requests'] = 0
+                if self.zd[z]['damper'] >= 95:
+                    self.zd[z]['requests'] = 1
+                    if 'flow' in self.zd[z] and 'flow_max' in self.zd[z]:
+                        if self.zd[z]['flow'] <= self.zd[z]['flow_max']*0.7:
+                            self.zd[z]['requests'] = 2    
+                        if self.zd[z]['flow'] <= self.zd[z]['flow_max']*0.5:
+                            self.zd[z]['requests'] = 3
+                        if self.zd[z]['flow'] <= self.zd[z]['flow_max']*0.25 and self.fdd:
+                            self.zd[z]['requests'] = 0
+                            self.missingPartial.append(z)
+                    else:
+                        self.missingPartial.append(z)
+            else:
+                self.missingEssential.append(z)
+      
+            self.handleAtypicalZones()
+      
+        if self.verbose:
+          self.displayDetails()
         
-        now = datetime.now()
-        if now.hour > 1:
-            lastest_file = csv_files[0]
-        else:
-            try:
-                lastest_file = csv_files[1] # get yesteday's csv        
-            except Exception as e:
-                print(e)
-                print('no csv from yesteday')
+        return self.calcTotalRequests()
+    
+    def displayDetails(self):
+        # Print the results for each zone if requested
+        print('\n================= Details for zones with almost fully open dampers ================ ')
+        for z in sorted(self.zd):
+            if self.zd[z]['damper'] >= 95:
+                print(str(z))
+
+class Clg_Request(Requests):
+    def __init__(self, *args, **kwargs):
+        super(Clg_Request, self).__init__(*args, **kwargs)
+    
+    def update(self):
+        self.missingPartial = []
+        self.missingEssential = []
+       
+        # clear existing zone data from previous update
+        for z in self.zd:
+            if 'cooling_loop' in self.zd[z]:
+                del self.zd[z]['cooling_loop']
+            if 'room_temp' in self.zd[z]:
+                del self.zd[z]['room_temp']
+            if 'clg_setpoint' in self.zd[z]:
+                del self.zd[z]['clg_setpoint']
+      
+        for zone_name in self.zone_names:
+            self.zd[zone_name] = {}
+            # get zone data
+            div_ID = self.zone_dev_map[zone_name]
+            zone_csv = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+            zone_data = np.genfromtxt(zone_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
+            
+            # min airflow
+            min_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_min) >= 0][0]
+            self.zd[zone_name]['min_flow'] = min_flow
+      
+            # max airflow
+            max_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_max) >= 0][0]
+            self.zd[zone_name]['max_flow'] = max_flow  
+      
+            # room temp
+            self.zd[zone_name]['room_temp'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.room_temp) >= 0][0] 
+      
+            # cooling setpoint
+            self.zd[zone_name]['clg_setpoint'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.clg_setpoint) >= 0][0] 
+            
+            # from AI_XXXX.csv
+            zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
+            zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
+            
+            # airflow
+            airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
+            self.zd[zone_name]['flow'] = airflow
+            
+            # cooling loop
+            self.zd[zone_name]['cooling_loop'] = (self.zd[zone_name]['flow'] - min_flow)/(max_flow - min_flow)
+         
+        # print('\n======= for cooling requests =======\n' )
+        # print(self.zd)
+      
+        # count cooling zones           
+        self.c = 0
+        # calculate cooling requests
+        for z in sorted(self.zd):
+            if 'cooling_loop' in self.zd[z]:
+                if self.zd[z]['room_temp'] > self.zd[z]['clg_setpoint']:
+                    self.c += 1   
+                if self.zd[z]['cooling_loop'] < .95:
+                    self.zd[z]['requests'] = 0
+                if self.zd[z]['cooling_loop'] >= .95:
+                    self.zd[z]['requests'] = 1
+                  
+                    if self.zd[z]['room_temp'] >= self.zd[z]['clg_setpoint'] + 3.0:
+                        self.zd[z]['requests'] = 2    
+                    if self.zd[z]['room_temp'] >= self.zd[z]['clg_setpoint'] + 5.0:
+                        self.zd[z]['requests'] = 3
+                  
+                    if self.low_temp_cutoff:
+                        if self.zd[z]['clg_setpoint'] <= self.low_temp_cutoff:
+                            #ignore requests from zone with a setpoint below a self.low_temp_cutoff
+                            self.zd[z]['requests'] = 0
+                        else:
+                            self.missingPartial.append(z)
+            else:
+                self.missingEssential.append(z)
+      
+        self.handleAtypicalZones()
+        
+        if self.verbose:
+            self.displayDetails()
+      
+        rv = self.calcTotalRequests()
+        rv['cooling_zones'] = self.c
+        
+        return rv
+    
+    def displayDetails(self):
+        # Print the results for each zone if requested
+        print('\n================= Details for zones with cooling loop almost at maximum ================ ')
+        for z in sorted(self.zd):
+            if 'cooling_loop' in self.zd[z]:
+                if self.zd[z]['cooling_loop'] >= 95:
+                    print(str(z))
                     
-        last_G36_row = None
-        with open(lastest_file, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['g36 finished'] != '-1':
-                    last_G36_row = row
 
-        # G36
-        last_G36_SAT = last_G36_row['G36 satsp ' + self.ahu_name]
-        last_G36_time = last_G36_row['TimeStamp']
-        dt_G36 = datetime.strptime(last_G36_time, '%Y-%m-%d %H:%M')
-        time_G36_lapesd = (now - dt_G36).total_seconds()/3600
-        
-        return last_G36_SAT, time_G36_lapesd  
+class Htg_Request(Requests):
+    def __init__(self, *args, **kwargs):
+        super(Htg_Request, self).__init__(*args, **kwargs)
     
-    def get_new_satsp(self):
-        try:
-            self.clg_requests.update()
-            # update setpoint temp limits based on outside air temperature        
-            # calculate the new supply air temp setpoint with the new setpoint limits
+    def update(self):
+        self.missingPartial = []
+        self.missingEssential = []
+       
+        # clear existing zone data from previous update
+        for z in self.zd:
+            if 'cooling_loop' in self.zd[z]:
+                del self.zd[z]['cooling_loop']
+            if 'room_temp' in self.zd[z]:
+                del self.zd[z]['room_temp']
+            if 'htg_setpoint' in self.zd[z]:
+                del self.zd[z]['htg_setpoint']
+      
+        for zone_name in self.zone_names:
+            self.zd[zone_name] = {}
+            # get zone data
+            div_ID = self.zone_dev_map[zone_name]
+            zone_csv = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+            zone_data = np.genfromtxt(zone_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
             
-            # min SAT setpoint
-            self.reset.SPmin = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmin_at_lo_oat, self.SPmin_at_hi_oat)                            
+            # min airflow
+            min_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_min) >= 0][0]
+            self.zd[zone_name]['min_flow'] = min_flow
+      
+            # max airflow
+            max_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_max) >= 0][0]
+            self.zd[zone_name]['max_flow'] = max_flow  
+      
+            # room temp
+            self.zd[zone_name]['room_temp'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.room_temp) >= 0][0]
             
-            # max SAT setpoint        
-            self.reset.SPmax = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmax_at_lo_oat, self.SPmax_at_hi_oat)
-
-            # use trim and respond without outside air based SAT setpoint limits
-            new_sp = self.reset.get_new_sp_clg(self.clg_requests.R , self.cur_sat)
-
-        except Exception as e:      
-            if self.algo == 1:
-                print(e)
-                
-            try: 
-                last_G36_SAT, time_G36_lapesd = self.get_last_good_SAT()
-                if time_G36_lapesd < self.max_off_time:
-                    new_sp = last_G36_SAT
-                    
-                    if self.algo == 1:
-                        print('******* G36 failed to run, and the last good SAT value was used *******')
-                else:
-                    if self.algo == 1:
-                        print('******* G36 failed to run for more than an hour *******')  
-                    # default to the baseline control
-                    new_sp = np.nan
-                
-            except Exception as e:
-                if self.algo == 1:
-                    print(e)
-                    print('******* G36 failed to run, and no good SAT value can be found *******') 
-                # default to the baseline control
-                new_sp = np.nan
-                    
-        return new_sp
+            # heating setpoint
+            self.zd[zone_name]['htg_setpoint'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.htg_setpoint) >= 0][0] 
+            
+            # from AI_XXXX.csv
+            zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
+            zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
+            
+            # airflow
+            airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
+            self.zd[zone_name]['flow'] = airflow
+            
+            # cooling loop
+            self.zd[zone_name]['cooling_loop'] = (self.zd[zone_name]['flow'] - min_flow)/(max_flow - min_flow)
+         
+        # print('\n======= for heating requests =======\n')
+        # print(self.zd)
+      
+        # count heating zones           
+        self.c = 0
+        # calculate cooling requests
+        for z in sorted(self.zd):
+          if 'cooling_loop' in self.zd[z]:
+              if self.zd[z]['room_temp'] < self.zd[z]['htg_setpoint']:
+                  self.c += 1   
+              if self.zd[z]['room_temp'] <= self.zd[z]['htg_setpoint'] + 3.0:
+                  self.zd[z]['requests'] = 2    
+              if self.zd[z]['room_temp'] <= self.zd[z]['htg_setpoint'] + 5.0:
+                  self.zd[z]['requests'] = 3
+              
+              if self.low_temp_cutoff:
+                  if self.zd[z]['htg_setpoint'] >= self.high_temp_cutoff:
+                      #ignore requests from zone with a setpoint below a self.low_temp_cutoff
+                      self.zd[z]['requests'] = 0
+                  else:
+                      self.missingPartial.append(z)
+          else:
+              self.missingEssential.append(z)
     
-    def get_new_satsp_humd(self, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt):
-        try:
-            self.clg_requests.update()
-            # update setpoint temp limits based on outside air temperature
-            # min SAT setpoint
-            self.reset.SPmin = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmin_at_lo_oat, self.SPmin_at_hi_oat)                                    
-            
-            # max SAT setpoint
-            reset_SPmax = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmax_at_lo_oat, self.SPmax_at_hi_oat)                           
-            oa_dpwt = self.cal_dew_point_temperature(self.current_oat, self.current_oarh)
-            humd_SPmax = self.calc_sp_limit(oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)              
-            
-            self.reset.SPmax = min(reset_SPmax, humd_SPmax)
-            
-            # use trim and respond without outside air based SAT setpoint limits
-            new_sp = self.reset.get_new_sp_clg(self.clg_requests.R , self.cur_sat)
-          
-        except Exception as e:
-            print(e)            
-            try: 
-                last_G36_SAT, time_G36_lapesd = self.get_last_good_SAT()
-                
-                if time_G36_lapesd < self.max_off_time:
-                    new_sp = last_G36_SAT
-                    print('******* G36 failed to run, and the last good SAT value was used *******')
-                else:
-                    print('******* G36 failed to run for more than an hour *******')
-                    # defalt to the baseline control
-                    new_sp = np.nan
-                
-            except Exception as e:
-                print(e)
-                print('******* G36 failed to run, and no good SAT value can be found *******')
-                # defalt to the baseline control
-                new_sp = np.nan
+        self.handleAtypicalZones()
         
-        return new_sp
-
-    def calc_sp_limit(self, current_oat, lo_oat, hi_oat, val_at_lo_oat, val_at_hi_oat):
-      # calculate the 
-      if current_oat <=lo_oat:        
-        rv = val_at_lo_oat
-      elif current_oat >= hi_oat:
-        rv = val_at_hi_oat
-      else:
-        # linearly interpolate
-        val_range = val_at_hi_oat-val_at_lo_oat
-        oat_range = hi_oat-lo_oat
-        rv = val_at_lo_oat +  val_range *(current_oat-lo_oat)/oat_range
-      return rv  
-  
-    def save_data_bydate(self, data2save, header, folder_dir, ahu_name):
-        # get the current date to name the file
-        date_str = datetime.now().strftime('%Y-%m-%d')
-        filename = os.path.join(self.folder_dir, 'log', self.ahu_name, f"G36_{self.ahu_name}_{date_str}.csv" )
+        if self.verbose:
+            self.displayDetails()
+      
+        rv = self.calcTotalRequests()
+        rv['heating_zones'] = self.c
         
-        # create the CSV file if it doesn't exist
-        if not os.path.exists(filename):
-            # create nested folders
-            os.makedirs(os.path.join(self.folder_dir, 'log', self.ahu_name), exist_ok=True)
-            with open(filename, mode='w', newline='') as file:
-                writer = csv.writer(file)
-                header.insert(0, 'TimeStamp')
-                writer.writerow(header)
+        return rv
     
-        # save data with the current timestamp
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
-        with open(filename, mode='a', newline='') as file:
-            writer = csv.writer(file)
-            data2save.insert(0, timestamp)
-            writer.writerow(data2save)
-                            
-    def log_data(self, newdata, ahu_data_AV, new_ahu_data_AV):
-        var_in_csv = newdata[3]
-        if not any(var_in_csv in item for item in ahu_data_AV['Object_Name']):
-            new_nparry = np.array([newdata], dtype=new_ahu_data_AV.dtype)                                                         
-            new_ahu_data_AV = np.append(new_ahu_data_AV, new_nparry)
-            
-        else:
-            idx_find = [np.char.find(ahu_data_AV['Object_Name'], var_in_csv)>=0][0]
-            new_ahu_data_AV['Present_Value'][idx_find] = newdata[-2]
-        
-        return new_ahu_data_AV
+    def displayDetails(self):
+        # Print the results for each zone if requested
+        print('\n================= Details for zones with cooling loop almost at maximum ================ ')
+        for z in sorted(self.zd):
+            if 'cooling_loop' in self.zd[z]:
+                if self.zd[z]['cooling_loop'] >= 95:
+                    print(str(z))
