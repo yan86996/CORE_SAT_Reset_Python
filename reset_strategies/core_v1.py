@@ -43,10 +43,6 @@ class CORE:
         # min/max sat
         self.min_sat_sp = self.reset.SPmin
         self.max_sat_sp = self.reset.SPmax
-        self.ts_data.append(self.min_sat_sp) # log
-        self.ts_header.append('min SAT') # log
-        self.ts_data.append(self.max_sat_sp) # log
-        self.ts_header.append('max SAT') # log
         
         self.num_ignore = num_ignore
         self.vavs = zone_names
@@ -306,9 +302,17 @@ class CORE:
                 
             if self.dehumid:
                 lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt = self.dehumd_limits
-                humd_SPmax = self.calc_sp_limit(self.cur_oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)              
+                humd_SPmax = self.calc_sp_limit(self.cur_oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)
+                self.ts_data.append(humd_SPmax) # log
+                self.ts_header.append('dehumid max SAT') # log
+                
                 self.max_sat_sp = min(self.max_sat_sp, humd_SPmax)
                 self.reset.SPmax = self.max_sat_sp
+            
+            self.ts_data.append(self.min_sat_sp) # log
+            self.ts_header.append('min SAT') # log
+            self.ts_data.append(self.reset.SPmax) # log
+            self.ts_header.append('max SAT') # log
                                
             # update cooling requests
             self.clg_requests.update()
@@ -421,7 +425,7 @@ class CORE:
                     idx_opt = np.argmin(self.estimations['tot_cost_delta'])                   
                     new_core_sat = self.cur_satsp + diff_sat[idx_opt]
                     
-                core_finish = 1
+                    core_finish = 1
                 
             except Exception as e:
                 print(e)
@@ -438,10 +442,9 @@ class CORE:
                     
                 core_finish = -1
             
-            self.ts_data.append(new_core_sat) # log 
+            self.ts_data.append(new_core_sat) # log
             self.ts_header.append('new CORE SAT setpoint') # log
-            
-            self.ts_data.append(core_finish) # log 
+            self.ts_data.append(core_finish) # log
             self.ts_header.append('core finished') # log
                         
             ## write SAT setpoint back 
@@ -456,6 +459,8 @@ class CORE:
             # write CORE new sat setpoint 
             elif self.algo == 2:
                 algo_finish = core_finish
+                if algo_finish > 0:
+                    algo_finish = 1
                 new_ahu_data_AV['Present_Value'][idx_find] = new_core_sat
                 print(f'# CORE picked for today: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}°F')         
             
@@ -814,15 +819,15 @@ class CORE:
         return T_dew_F
     
     def calc_sp_limit(self, current_oat, lo_oat, hi_oat, val_at_lo_oat, val_at_hi_oat):
-      # calculate the sat sp 
-      if current_oat <=lo_oat:        
-        rv = val_at_lo_oat
-      elif current_oat >= hi_oat:
-        rv = val_at_hi_oat
-      else:
-        # linearly interpolate
-        val_range = val_at_hi_oat-val_at_lo_oat
-        oat_range = hi_oat-lo_oat
-        rv = val_at_lo_oat +  val_range * (current_oat-lo_oat)/ oat_range
-        
-      return rv
+        # calculate the sat sp 
+        if current_oat <=lo_oat:        
+            rv = val_at_lo_oat
+        elif current_oat >= hi_oat:
+            rv = val_at_hi_oat
+        else:
+            # linearly interpolate
+            val_range = val_at_hi_oat-val_at_lo_oat
+            oat_range = hi_oat - lo_oat
+            rv = val_at_lo_oat + val_range * (current_oat-lo_oat)/ oat_range
+            
+        return rv
