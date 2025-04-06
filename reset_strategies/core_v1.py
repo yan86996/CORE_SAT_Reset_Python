@@ -383,9 +383,13 @@ class CORE:
             
             # calculate the feasible range of diff_sat
             candidate_sat = self.diff_sat + self.cur_satsp
+            diff_sat = candidate_sat - self.cur_satsp
             
             # run CORE calculations
             try:
+                # estimate power consumption values under different setpoints
+                self.estimate_power(self.cur_satsp, diff_sat)         
+
                 # comfort constraint present
                 # cooling request
                 if self.clg_requests.R > self.num_ignore:
@@ -404,14 +408,10 @@ class CORE:
                 # no comfort present
                 # run CORE algorithm
                 else:
-                    print('###### No comofor request, CORE runs for {self.ahu_name} ######')                    
+                    print('###### No comofor request, CORE runs for {self.ahu_name} ######') 
                     # sat setpoint range check
                     candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
-                    candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)  
-                    diff_sat = candidate_sat - self.cur_satsp
-                    
-                    # estimate power consumption values under different setpoints    
-                    self.estimate_power(self.cur_satsp, diff_sat)         
+                    candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)
                     
                     # util_rate.price(datetime_obj, 2)
                     elec_price = 0.2 # TO CHANGE                
@@ -634,7 +634,7 @@ class CORE:
             room_temp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Space Temperature') >= 0][0]        
             self.ts_data.append(room_temp) # log 
             self.ts_header.append(vav +' room temp') # log
-            
+                        
             # reheat
             reheat_pos = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Reheat Valve Position') >= 0][0]
             self.ts_data.append(reheat_pos) # log 
