@@ -28,7 +28,7 @@ if __name__=='__main__':
     
     # trim and respond logic params
     # AHU5:26 zones, AHU6:42 zones, AHU7: 58 zones
-    num_ignore_ahu5, num_ignore_ahu6, num_ignore_ahu7 = 3, 5, 6
+    num_ignore_ahu5, num_ignore_ahu6, num_ignore_ahu7 = 26*5/10, 42*5/10, 58*5/10
     
     sp_default = 58 # default setpoint if control algo doesn't work
     sp_trim = 0.2
