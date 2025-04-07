@@ -394,14 +394,14 @@ class CORE:
                 # cooling request
                 if self.clg_requests.R_clg > self.num_ignore:
                     # use trim and respond without outside air based SAT setpoint limits
-                    new_core_sat = self.reset.get_new_sp_clg(self.clg_requests.R, self.cur_sat)
+                    new_core_sat = self.reset.get_new_sp_clg(self.clg_requests.R_clg, self.cur_sat)
                     core_finish = 3
                     print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for cooling requests ######')
                     
                 # heating request
                 elif self.htg_requests.R_htg > self.num_ignore:
                     # use trim and respond without outside air based SAT setpoint limits
-                    new_core_sat = self.reset.get_new_sp_htg(self.htg_requests.R, self.cur_sat)
+                    new_core_sat = self.reset.get_new_sp_htg(self.htg_requests.R_htg, self.cur_sat)
                     core_finish = 2
                     print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for heating requests ######')
     
