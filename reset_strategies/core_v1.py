@@ -383,8 +383,11 @@ class CORE:
             
             # calculate the feasible range of diff_sat
             candidate_sat = self.diff_sat + self.cur_satsp
+            # sat setpoint range check
+            candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
+            candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)
             diff_sat = candidate_sat - self.cur_satsp
-            
+
             # run CORE calculations
             try:
                 # estimate power consumption values under different setpoints
@@ -409,10 +412,7 @@ class CORE:
                 # run CORE algorithm
                 else:
                     print('###### No comofort request, CORE runs for {self.ahu_name} ######') 
-                    # sat setpoint range check
-                    candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
-                    candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)
-                    
+
                     # util_rate.price(datetime_obj, 2)
                     elec_price = 0.2 # TO CHANGE                
                     steam_price = (51.972/1000)
