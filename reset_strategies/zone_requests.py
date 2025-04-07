@@ -147,7 +147,6 @@ class Pressure(Requests):
             self.zd[zone_name]['flow'] = airflow
       
         print('\n======= for pressure requests =======\n' )
-        print(self.zd)
     
       # calculate requests
         for z in sorted(self.zd):
@@ -199,41 +198,49 @@ class Clg_Request(Requests):
                 del self.zd[z]['room_temp']
             if 'clg_setpoint' in self.zd[z]:
                 del self.zd[z]['clg_setpoint']
-      
+        
         for zone_name in self.zone_names:
             self.zd[zone_name] = {}
-            # get zone data
-            div_ID = self.zone_dev_map[zone_name]
-            zone_csv = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
-            zone_data = np.genfromtxt(zone_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
+            try:
+                # get zone data
+                div_ID = self.zone_dev_map[zone_name]
+                zone_csv = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+                zone_data = np.genfromtxt(zone_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
+                
+                # min airflow
+                min_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_min) >= 0][0]
+                self.zd[zone_name]['min_flow'] = min_flow
+          
+                # max airflow
+                max_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_max) >= 0][0]
+                self.zd[zone_name]['max_flow'] = max_flow  
+          
+                # room temp
+                self.zd[zone_name]['room_temp'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.room_temp) >= 0][0] 
+          
+                # cooling setpoint
+                self.zd[zone_name]['clg_setpoint'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.clg_setpoint) >= 0][0] 
             
-            # min airflow
-            min_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_min) >= 0][0]
-            self.zd[zone_name]['min_flow'] = min_flow
-      
-            # max airflow
-            max_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_max) >= 0][0]
-            self.zd[zone_name]['max_flow'] = max_flow  
-      
-            # room temp
-            self.zd[zone_name]['room_temp'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.room_temp) >= 0][0] 
-      
-            # cooling setpoint
-            self.zd[zone_name]['clg_setpoint'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.clg_setpoint) >= 0][0] 
+            except Exception as e:
+                print(e)
+                print(f'missing data in AV_{div_ID}.csv')
             
-            # from AI_XXXX.csv
-            zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
-            zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
-            
-            # airflow
-            airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
-            self.zd[zone_name]['flow'] = airflow
-            
-            # cooling loop
-            self.zd[zone_name]['cooling_loop'] = (self.zd[zone_name]['flow'] - min_flow)/(max_flow - min_flow)
-         
-        # print('\n======= for cooling requests =======\n' )
-      
+            try:    
+                # from AI_XXXX.csv
+                zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
+                zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
+                
+                # airflow
+                airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
+                self.zd[zone_name]['flow'] = airflow
+                
+                # cooling loop
+                self.zd[zone_name]['cooling_loop'] = (self.zd[zone_name]['flow'] - min_flow)/(max_flow - min_flow)
+                
+            except Exception as e:
+                print(e)
+                print(f'missing data in AI_{div_ID}.csv')
+        
         # count cooling zones           
         self.c_clg = 0
         # calculate cooling requests
@@ -286,7 +293,6 @@ class Htg_Request(Requests):
     def update(self):
         self.missingPartial = []
         self.missingEssential = []
-       
         # clear existing zone data from previous update
         for z in self.zd:
             if 'cooling_loop' in self.zd[z]:
@@ -295,39 +301,46 @@ class Htg_Request(Requests):
                 del self.zd[z]['room_temp']
             if 'htg_setpoint' in self.zd[z]:
                 del self.zd[z]['htg_setpoint']
-      
+                
+        
         for zone_name in self.zone_names:
             self.zd[zone_name] = {}
-            # get zone data
-            div_ID = self.zone_dev_map[zone_name]
-            zone_csv = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
-            zone_data = np.genfromtxt(zone_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
-            
-            # min airflow
-            min_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_min) >= 0][0]
-            self.zd[zone_name]['min_flow'] = min_flow
-      
-            # max airflow
-            max_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_max) >= 0][0]
-            self.zd[zone_name]['max_flow'] = max_flow  
-      
-            # room temp
-            self.zd[zone_name]['room_temp'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.room_temp) >= 0][0]
-            
-            # heating setpoint
-            self.zd[zone_name]['htg_setpoint'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.htg_setpoint) >= 0][0] 
-            
-            # from AI_XXXX.csv
-            zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
-            zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
-            
-            # airflow
-            airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
-            self.zd[zone_name]['flow'] = airflow
-            
-         
-        # print('\n======= for heating requests =======\n')
-      
+            try: 
+                # get zone data
+                div_ID = self.zone_dev_map[zone_name]
+                zone_csv = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+                zone_data = np.genfromtxt(zone_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
+                
+                # min airflow
+                min_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_min) >= 0][0]
+                self.zd[zone_name]['min_flow'] = min_flow
+          
+                # max airflow
+                max_flow = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.flow_max) >= 0][0]
+                self.zd[zone_name]['max_flow'] = max_flow  
+          
+                # room temp
+                self.zd[zone_name]['room_temp'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.room_temp) >= 0][0]
+                
+                # heating setpoint
+                self.zd[zone_name]['htg_setpoint'] = zone_data['Present_Value'][np.char.find(zone_data['Object_Name'], self.htg_setpoint) >= 0][0] 
+            except Exception as e:
+                print(e)
+                print(f'missing data in AV_{div_ID}.csv')
+                
+            try: 
+                # from AI_XXXX.csv
+                zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
+                zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
+                
+                # airflow
+                airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
+                self.zd[zone_name]['flow'] = airflow
+                
+            except Exception as e:
+                print(e)
+                print(f'missing data in AI_{div_ID}.csv')
+                          
         # count heating zones           
         self.c_htg = 0
         # calculate cooling requests
