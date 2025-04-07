@@ -49,29 +49,44 @@ class Requests:
     
     def calcTotalRequests(self):
         # Sum up the total number of requests (and also weighted by importance)
-        self.rR = 0
-        self.R = 0
-        for z in self.zd:
-            if 'requests' in self.zd[z]:
-                self.rR += self.zd[z]['requests']
-                if 'importance' in self.zd[z]:
-                    self.R += self.zd[z]['requests'] * float(self.zd[z]['importance'])
-                else:
-                    self.R += self.zd[z]['requests']
-                
+        self.rR_clg = 0
+        self.rR_htg = 0
+        self.R_clg = 0
+        self.R_htg = 0
+        
+        for z in self.zd:  
             if 'clg_requests' in self.zd[z]:
-                self.rR += self.zd[z]['requests']
+                self.rR_clg += self.zd[z]['clg_requests']
+
                 if 'importance' in self.zd[z]:
-                    self.R += self.zd[z]['requests'] * float(self.zd[z]['importance'])
+                    self.R_clg += self.zd[z]['clg_requests'] * float(self.zd[z]['importance'])
                 else:
-                    self.R += self.zd[z]['requests']  
-      
-        rv = {'raw_requests': self.rR, 
-              'weighted_requests': self.R, 
-              'ignored_zones': self.ignore, 
-              'partial_zones': self.missingPartial,
+                    self.R_clg += self.zd[z]['clg_requests']               
+            
+                rv = {'raw_clg_requests': self.rR_clg, 
+                      'weighted_clg_requests': self.R_clg,                            
+                      'ignored_zones': self.ignore, 
+                      'partial_zones': self.missingPartial,
+                     }
+            
+            if 'htg_requests' in self.zd[z]:
+                self.rR_htg += self.zd[z]['htg_requests']
+                                
+                if 'importance' in self.zd[z]:
+                    self.R_htg += self.zd[z]['htg_requests'] * float(self.zd[z]['importance'])
+                else:
+                    self.R_htg += self.zd[z]['htg_requests']
+                          
+               
+        
+        rv = {'raw_clg_requests': self.rR_clg, 
+             'weighted_clg_requests': self.R_clg,
+             'raw_htg_requests': self.rR_htg, 
+             'weighted_htg_requests': self.R_htg,
+             'ignored_zones': self.ignore, 
+             'partial_zones': self.missingPartial,
              }
-      
+        
         if self.verbose:
             print('\n================= Requests summary ================ ')
             print('Total raw requests: ' + str(self.rR))
@@ -217,29 +232,28 @@ class Clg_Request(Requests):
             self.zd[zone_name]['cooling_loop'] = (self.zd[zone_name]['flow'] - min_flow)/(max_flow - min_flow)
          
         # print('\n======= for cooling requests =======\n' )
-        # print(self.zd)
       
         # count cooling zones           
-        self.c = 0
+        self.c_clg = 0
         # calculate cooling requests
         for z in sorted(self.zd):
             if 'cooling_loop' in self.zd[z]:
                 if self.zd[z]['room_temp'] > self.zd[z]['clg_setpoint']:
-                    self.c += 1   
+                    self.c_clg += 1   
                 if self.zd[z]['cooling_loop'] < .95:
-                    self.zd[z]['requests'] = 0
+                    self.zd[z]['clg_requests'] = 0
                 if self.zd[z]['cooling_loop'] >= .95:
-                    self.zd[z]['requests'] = 1
+                    self.zd[z]['clg_requests'] = 1
                   
                     if self.zd[z]['room_temp'] >= self.zd[z]['clg_setpoint'] + 3.0:
-                        self.zd[z]['requests'] = 2    
+                        self.zd[z]['clg_requests'] = 2    
                     if self.zd[z]['room_temp'] >= self.zd[z]['clg_setpoint'] + 5.0:
-                        self.zd[z]['requests'] = 3
+                        self.zd[z]['clg_requests'] = 3
                   
                     if self.low_temp_cutoff:
                         if self.zd[z]['clg_setpoint'] <= self.low_temp_cutoff:
                             #ignore requests from zone with a setpoint below a self.low_temp_cutoff
-                            self.zd[z]['requests'] = 0
+                            self.zd[z]['clg_requests'] = 0
                         else:
                             self.missingPartial.append(z)
             else:
@@ -251,7 +265,7 @@ class Clg_Request(Requests):
             self.displayDetails()
       
         rv = self.calcTotalRequests()
-        rv['cooling_zones'] = self.c
+        rv['cooling_zones'] = self.c_clg
         
         return rv
     
@@ -310,32 +324,27 @@ class Htg_Request(Requests):
             airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
             self.zd[zone_name]['flow'] = airflow
             
-            # cooling loop
-            self.zd[zone_name]['cooling_loop'] = (self.zd[zone_name]['flow'] - min_flow)/(max_flow - min_flow)
          
         # print('\n======= for heating requests =======\n')
-        # print(self.zd)
       
         # count heating zones           
-        self.c = 0
+        self.c_htg = 0
         # calculate cooling requests
         for z in sorted(self.zd):
-          if 'cooling_loop' in self.zd[z]:
-              if self.zd[z]['room_temp'] < self.zd[z]['htg_setpoint']:
-                  self.c += 1   
-              if self.zd[z]['room_temp'] <= self.zd[z]['htg_setpoint'] + 3.0:
-                  self.zd[z]['requests'] = 2    
-              if self.zd[z]['room_temp'] <= self.zd[z]['htg_setpoint'] + 5.0:
-                  self.zd[z]['requests'] = 3
-              
-              if self.low_temp_cutoff:
-                  if self.zd[z]['htg_setpoint'] >= self.high_temp_cutoff:
-                      #ignore requests from zone with a setpoint below a self.low_temp_cutoff
-                      self.zd[z]['requests'] = 0
-                  else:
-                      self.missingPartial.append(z)
-          else:
-              self.missingEssential.append(z)
+            if self.zd[z]['room_temp'] < self.zd[z]['htg_setpoint']:
+                self.zd[z]['htg_requests'] = 1    
+                self.c_htg += 1   
+            if self.zd[z]['room_temp'] <= self.zd[z]['htg_setpoint'] - 3.0:
+                self.zd[z]['htg_requests'] = 2    
+            if self.zd[z]['room_temp'] <= self.zd[z]['htg_setpoint'] - 5.0:
+                self.zd[z]['htg_requests'] = 3
+            
+            if self.low_temp_cutoff:
+                if self.zd[z]['htg_setpoint'] >= self.high_temp_cutoff:
+                    #ignore requests from zone with a setpoint below a self.low_temp_cutoff
+                    self.zd[z]['htg_requests'] = 0
+                else:
+                    self.missingPartial.append(z)
     
         self.handleAtypicalZones()
         
@@ -343,7 +352,7 @@ class Htg_Request(Requests):
             self.displayDetails()
       
         rv = self.calcTotalRequests()
-        rv['heating_zones'] = self.c
+        rv['heating_zones'] = self.c_htg
         
         return rv
     
