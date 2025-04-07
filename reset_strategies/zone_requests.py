@@ -9,8 +9,11 @@ class Requests:
     def __init__(self, verbose=False, ignore=[], important=[], folder_dir = None, zone_names=None, zone_dev_map = None, room_temp=None, clg_setpoint=None, htg_setpoint=None,     
                  flow=None, flow_min=None, flow_max=None, damper=None, lim_dt_errs = 20, fdd=False, low_temp_cutoff=None, high_temp_cutoff=None):
 	           
-        self.rR = 0 # raw requests
-        self.R = 0 # importance weighted requests
+        self.rR_clg = 0 # raw requests
+        self.rR_htg = 0 # raw requests
+        self.R_clg = 0 # importance weighted requests
+        self.R_htg = 0 # importance weighted requests
+        
         self.ignore = ignore
         self.important = important
         self.zone_dev_map = zone_dev_map
@@ -49,10 +52,6 @@ class Requests:
     
     def calcTotalRequests(self):
         # Sum up the total number of requests (and also weighted by importance)
-        self.rR_clg = 0
-        self.rR_htg = 0
-        self.R_clg = 0
-        self.R_htg = 0
         
         for z in self.zd:  
             if 'clg_requests' in self.zd[z]:
@@ -89,8 +88,10 @@ class Requests:
         
         if self.verbose:
             print('\n================= Requests summary ================ ')
-            print('Total raw requests: ' + str(self.rR))
-            print('Total importance-weighted requests: ' + str(self.R))
+            print('Total raw cooling requests: ' + str(self.rR_clg))
+            print('Total importance-weighted cooling requests: ' + str(self.R_clg))
+            print('Total raw heating requests: ' + str(self.rR_htg))
+            print('Total importance-weighted cooling requests: ' + str(self.R_htg))
             if len(self.ignore):
                 print('Ignored zones (user selected): ')
             if len(self.missingEssential):   
