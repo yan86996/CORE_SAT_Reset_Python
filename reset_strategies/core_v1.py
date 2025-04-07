@@ -313,7 +313,7 @@ class CORE:
             self.ts_header.append('min SAT') # log
             self.ts_data.append(self.reset.SPmax) # log
             self.ts_header.append('max SAT') # log
-                               
+                        
             # update cooling requests
             self.clg_requests.update()
             self.ts_data.append(self.clg_requests.R_clg) # log
@@ -323,7 +323,8 @@ class CORE:
             self.htg_requests.update()
             self.ts_data.append(self.htg_requests.R_htg) # log
             self.ts_header.append('number of heating requests') # log
-                        
+            
+
             # G36 algo finished
             if self.g36_sat == np.nan:
                 g36_finish = -1
@@ -387,6 +388,7 @@ class CORE:
             candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
             candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)
             diff_sat = candidate_sat - self.cur_satsp
+            
 
             # run CORE calculations
             try:
@@ -397,21 +399,21 @@ class CORE:
                 # cooling request
                 if self.clg_requests.R_clg > self.num_ignore:
                     # use trim and respond without outside air based SAT setpoint limits
-                    new_core_sat = self.reset.get_new_sp_clg(self.clg_requests.R_clg, self.cur_sat)
+                    new_core_sat = self.reset.get_new_sp_clg(self.clg_requests.R_clg, self.cur_satsp)
                     core_finish = 3
                     print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for cooling requests ######')
                     
                 # heating request
                 elif self.htg_requests.R_htg > self.num_ignore:
                     # use trim and respond without outside air based SAT setpoint limits
-                    new_core_sat = self.reset.get_new_sp_htg(self.htg_requests.R_htg, self.cur_sat)
+                    new_core_sat = self.reset.get_new_sp_htg(self.htg_requests.R_htg, self.cur_satsp)
                     core_finish = 2
                     print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for heating requests ######')
     
                 # no comfort present
                 # run CORE algorithm
                 else:
-                    print('###### No comofort request, CORE runs for {self.ahu_name} ######') 
+                    print(f'###### No comofort request, CORE runs for {self.ahu_name} ######') 
 
                     # util_rate.price(datetime_obj, 2)
                     elec_price = 0.2 # TO CHANGE                
@@ -468,7 +470,7 @@ class CORE:
             else:
                 algo_finish = np.nan
                 print('# baseline control used')
-            
+                            
             # CORE/G36 finished
             algo_finish_array = ('3050090', 'analog-value', '9999999', 'picked algo finished for ' + self.ahu_name, algo_finish,'/')
             new_ahu_data_AV = self.log_data(algo_finish_array, self.ahu_data_AV, new_ahu_data_AV)
@@ -508,6 +510,7 @@ class CORE:
             overwrite_csv = os.path.join(self.folder_dir, f'AV_{self.ahu_dev_ID}_out.csv')
             with open(overwrite_csv, "w", encoding='utf-8') as f:
                 np.savetxt(f, new_ahu_data_AV, header=','.join(self.ahu_data_AV_header), delimiter=",", fmt='%s')
+            
             
             ###
             ## save time-series vars on a daily basis
@@ -760,7 +763,6 @@ class CORE:
             afr = np.minimum(np.maximum(afr, afr_min), afr_max)
 
             ### actual deltaT vs assumed deltaT to be checked later
-                        
             new_zone_afr = []
             for x in diff_sat:
                 if (clg_sp - (cur_sat + x) - 2) == 0:
