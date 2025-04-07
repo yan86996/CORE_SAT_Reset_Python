@@ -316,12 +316,12 @@ class CORE:
                                
             # update cooling requests
             self.clg_requests.update()
-            self.ts_data.append(self.clg_requests.R) # log
+            self.ts_data.append(self.clg_requests.R_clg) # log
             self.ts_header.append('number of cooling requests') # log
             
             # update heating requests
             self.htg_requests.update()
-            self.ts_data.append(self.htg_requests.R) # log
+            self.ts_data.append(self.htg_requests.R_htg) # log
             self.ts_header.append('number of heating requests') # log
                         
             # G36 algo finished
@@ -392,14 +392,14 @@ class CORE:
 
                 # comfort constraint present
                 # cooling request
-                if self.clg_requests.R > self.num_ignore:
+                if self.clg_requests.R_clg > self.num_ignore:
                     # use trim and respond without outside air based SAT setpoint limits
                     new_core_sat = self.reset.get_new_sp_clg(self.clg_requests.R, self.cur_sat)
                     core_finish = 3
                     print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for cooling requests ######')
                     
                 # heating request
-                elif self.htg_requests.R > self.num_ignore:
+                elif self.htg_requests.R_htg > self.num_ignore:
                     # use trim and respond without outside air based SAT setpoint limits
                     new_core_sat = self.reset.get_new_sp_htg(self.htg_requests.R, self.cur_sat)
                     core_finish = 2
@@ -408,7 +408,7 @@ class CORE:
                 # no comfort present
                 # run CORE algorithm
                 else:
-                    print('###### No comofor request, CORE runs for {self.ahu_name} ######') 
+                    print('###### No comofort request, CORE runs for {self.ahu_name} ######') 
                     # sat setpoint range check
                     candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
                     candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)
@@ -758,11 +758,20 @@ class CORE:
         # cooling
         else:
             afr = np.minimum(np.maximum(afr, afr_min), afr_max)
-            
-            ### actual deltaT vs assumed deltaT to be checked later
-            new_zone_afr = afr * (clg_sp - cur_sat - 2) / (clg_sp - (cur_sat + diff_sat) - 2)
-            new_zone_afr = np.minimum(np.maximum(new_zone_afr, afr_min), afr_max)
 
+            ### actual deltaT vs assumed deltaT to be checked later
+                        
+            new_zone_afr = []
+            for x in diff_sat:
+                if (clg_sp - (cur_sat + x) - 2) == 0:
+                    value = afr * (clg_sp - cur_sat - 1.99) / (clg_sp - (cur_sat + x) - 1.99)
+                else:
+                    value = afr * (clg_sp - cur_sat - 2) / (clg_sp - (cur_sat + x) - 2)
+                    
+                new_zone_afr.append(value)
+                        
+            new_zone_afr = np.minimum(np.maximum(new_zone_afr, afr_min), afr_max)
+            
             if 0.1 < clg < 99.9:
                 diff_zone_afr = new_zone_afr - afr
                 
@@ -778,7 +787,7 @@ class CORE:
             print('issue encountered in calc_diff_zone_afr()')
             print('new_zone_afr:%s'%new_zone_afr)
             print('diff_zone_afr:%s'%diff_zone_afr)
-            print('cur_sat=%s, diff_sat=%s, afr=%s, cur_temp_sp=%s, room_temp=%s, afr_min=%s, afr_max=%s, clg=%s'%(cur_sat, diff_sat, afr, clg_sp, room_temp, afr_min, afr_max, clg))
+            print('cur_sat=%s, diff_sat=%s, afr=%s, cur_clg_sp=%s, room_temp=%s, afr_min=%s, afr_max=%s, clg=%s'%(cur_sat, diff_sat, afr, clg_sp, room_temp, afr_min, afr_max, clg))
             diff_zone_afr = np.zeros(len(diff_sat))
         
         return diff_zone_afr
