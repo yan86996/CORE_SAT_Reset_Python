@@ -104,7 +104,7 @@ class G36:
             self.reset.SPmax = self.calc_sp_limit(self.current_oat, self.lo_oat, self.hi_oat, self.SPmax_at_lo_oat, self.SPmax_at_hi_oat)
 
             # use trim and respond without outside air based SAT setpoint limits
-            new_sp = self.reset.get_new_sp_clg(self.clg_requests.R , self.cur_sat)
+            new_sp = self.reset.get_new_sp_clg(self.clg_requests.R_clg , self.cur_sat)
 
         except Exception as e:      
             if self.algo == 1:
@@ -147,7 +147,7 @@ class G36:
             self.reset.SPmax = min(reset_SPmax, humd_SPmax)
             
             # use trim and respond without outside air based SAT setpoint limits
-            new_sp = self.reset.get_new_sp_clg(self.clg_requests.R , self.cur_sat)
+            new_sp = self.reset.get_new_sp_clg(self.clg_requests.R_clg , self.cur_sat)
           
         except Exception as e:
             print(e)            
