@@ -331,7 +331,7 @@ class CORE:
                 # default to the baseline control
                 if self.algo == 1:
                     self.algo = 0
-                print('******* Default to baseline control *******')
+                    print('******* Default to baseline control *******')
                 
             else:
                 g36_finish = 1
