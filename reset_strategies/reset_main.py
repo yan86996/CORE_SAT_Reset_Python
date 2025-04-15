@@ -22,7 +22,7 @@ if __name__=='__main__':
     from rand_dates import *
     
     # initialization
-    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test2_old'))
+    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test2'))
     core_version = 'v1'
     max_off_time = 1
     
