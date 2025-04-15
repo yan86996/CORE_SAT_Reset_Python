@@ -56,6 +56,11 @@ class CORE:
         self.ahu_name = ahu_name
         self.ahu_dev_ID = ahu_dev_map[ahu_name]
         
+        # init estimations
+        self.chw_coils_hist = 0
+        self.estimations = {}
+        self.rhv_coils_hist = {}
+        
     def read_ahu_csvs(self):
         # from AV_XXXX.csv
         try:
@@ -133,7 +138,6 @@ class CORE:
             print(e)
             print(f'Failed to find AI_{self.ahu_dev_ID}.csv')
         
-        
         # from AO_XXXX.csv
         # clg coil valve
         try:
@@ -200,11 +204,7 @@ class CORE:
         self.vfd_sf_power = vfd_sf_power  # KW
         self.vfd_rf_power = vfd_rf_power  # KW
         
-    def read_hist_vars_csvs(self):        
-        # init estimations
-        self.rhv_coils_hist = {}
-        self.estimations = {}
-        
+    def read_hist_vars_csvs(self):    
        # check if logging var in AV_3050090.csv
         log_AV_csv = os.path.join(self.folder_dir, 'AV_3050090.csv')
         
@@ -214,35 +214,62 @@ class CORE:
             # check if chw_coils_hist already exists
             if ('chw_coils_hist_'+ self.ahu_name) not in log_data_AV['Object_Name']:
                 self.chw_coils_hist = 0
+                self.ts_data.append('-2') # log 
             else:
                 self.chw_coils_hist = log_data_AV['Present_Value'][np.char.find(log_data_AV['Object_Name'], 'chw_coils_hist_'+ self.ahu_name) >= 0][0]
+                self.ts_data.append(self.chw_coils_hist) # log 
             
+            self.ts_header.append('chw_coils_hist from AV_3050090') # log
+        
             # check if clg_coil_clo_temp_chg already exists
             if ('clg_coil_clo_temp_chg_'+self.ahu_name) not in log_data_AV['Object_Name']:
                 self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = 2
+                self.ts_data.append('-2') # log 
             else:
                 self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = log_data_AV['Present_Value'][np.char.find(log_data_AV['Object_Name'], 'clg_coil_clo_temp_chg_'+ self.ahu_name) >= 0][0]
-
-            # if rhv_coils_hist already exists
+                self.ts_data.append(self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name]) # log 
+            
+            self.ts_header.append('clg_coil_clo_temp_chg from AV_3050090') # log
+            
+            # check if rhv_coils_hist already exists
             for vav in self.vavs:
                 if ('rhv_coils_hist_' + vav) not in log_data_AV['Object_Name']:
                     self.rhv_coils_hist['rhv_coils_hist_' + vav]= 0
+                    self.ts_data.append('-2') # log
+                    
                     self.estimations['rhv_clo_temp_chg_' + vav] = 2
+                    self.ts_data.append('-2') # log 
+                    
                 else:
                     self.rhv_coils_hist['rhv_coils_hist_' + vav] = log_data_AV['Present_Value'][np.char.find(log_data_AV['Object_Name'], 'rhv_coils_hist_'+ vav) >= 0][0]
+                    self.ts_data.append(self.rhv_coils_hist['rhv_coils_hist_' + vav]) # log       
+                    
                     self.estimations['rhv_clo_temp_chg_' + vav] = log_data_AV['Present_Value'][np.char.find(log_data_AV['Object_Name'], 'rhv_clo_temp_chg_'+ vav) >= 0][0]
-                      
-        else: 
+                    self.ts_data.append(self.estimations['rhv_clo_temp_chg_' + vav]) # log 
+                
+                self.ts_header.append('rhv_coils_hist_' + vav + ' from AV_3050090') # log
+                self.ts_header.append('rhv_clo_temp_chg_' + vav + ' from AV_3050090') # log
+        else:
             # update clg coil hist and temp_change_when_closed
             self.chw_coils_hist = 0
+            self.ts_data.append('-1') # log 
+            self.ts_header.append('chw_coils_hist from AV_3050090') # log
+            
             self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = 2
+            self.ts_data.append('-1') # log 
+            self.ts_header.append('clg_coil_clo_temp_chg from AV_3050090') # log
             
             # reheat coil hist exists for all vavs
             for vav in self.vavs:
                 self.rhv_coils_hist['rhv_coils_hist_' + vav] = 0
+                self.ts_data.append('-1') # log
+                self.ts_header.append('rhv_coils_hist_' + vav + ' from AV_3050090') # log
+                
                 self.estimations['rhv_clo_temp_chg_' + vav] = 2
+                self.ts_data.append('-1') # log 
+                self.ts_header.append('rhv_clo_temp_chg_' + vav + ' from AV_3050090') # log
         
-    def read_pump_power_csvs(self):    
+    def read_pump_power_csvs(self):
         for key, value in self.pump_dev_map.items():
             pump_csv = os.path.join(self.folder_dir, 'AV_3050090.csv')        
             pump_data_AV = np.genfromtxt(pump_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
@@ -324,7 +351,6 @@ class CORE:
             self.ts_data.append(self.htg_requests.R_htg) # log
             self.ts_header.append('number of heating requests') # log
             
-
             # G36 algo finished
             if self.g36_sat == np.nan:
                 g36_finish = -1
@@ -389,7 +415,6 @@ class CORE:
             candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)
             diff_sat = candidate_sat - self.cur_satsp
             
-
             # run CORE calculations
             try:
                 # estimate power consumption values under different setpoints
@@ -494,23 +519,20 @@ class CORE:
             for vav in self.vavs:
                 # reheat coil temp change
                 new_rhv_tempchg_data = ('3050090', 'analog-value', '9999999', 'rhv_clo_temp_chg_' + vav, self.estimations['rhv_clo_temp_chg_' + vav], '°F')                                             
-                new_ahu_data_AV = self.log_data(new_rhv_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)
-                
+                new_ahu_data_AV = self.log_data(new_rhv_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)            
                 self.ts_data.append(self.estimations['rhv_clo_temp_chg_' + vav]) # log 
                 self.ts_header.append('rhv_clo_temp_chg_' + vav) # log
                 
                 # reheat coil hist
                 new_rhv_hist_data = ('3050090', 'analog-value', '9999999', 'rhv_coils_hist_' + vav, self.rhv_coils_hist['rhv_coils_hist_'+vav], '/')                  
                 new_ahu_data_AV = self.log_data(new_rhv_hist_data, self.ahu_data_AV, new_ahu_data_AV)
-                
                 self.ts_data.append(self.rhv_coils_hist['rhv_coils_hist_'+vav]) # log 
-                self.ts_header.append('rhv_clo_temp_chg_' + vav) # log
+                self.ts_header.append('rhv_coils_hist_' + vav) # log
             
             # write to AV_.csv
             overwrite_csv = os.path.join(self.folder_dir, f'AV_{self.ahu_dev_ID}_out.csv')
             with open(overwrite_csv, "w", encoding='utf-8') as f:
                 np.savetxt(f, new_ahu_data_AV, header=','.join(self.ahu_data_AV_header), delimiter=",", fmt='%s')
-            
             
             ###
             ## save time-series vars on a daily basis
@@ -682,7 +704,7 @@ class CORE:
                 diff_rhv_power = self.calc_heat_flow(new_zone_afr, delta_T)
                 self.ts_data += np.concatenate([arr.flatten() for arr in diff_rhv_power]).tolist() # log 
                 
-            self.ts_header += [vav+' rhv power for lo SAT (BTU/h)', vav+' rhv power for cur SAT', vav+' rhv power for hi SAT', ] # log                                  
+            self.ts_header += [vav+' rhv power for lo SAT (BTU/h)', vav+' rhv power for cur SAT (BTU/h)', vav+' rhv power for hi SAT (BTU/h)', ] # log                                  
                                              
         diff_afr = self.estimations['diff_zone_tot_afr']
         afr_ratio = (afr + diff_afr)/afr
