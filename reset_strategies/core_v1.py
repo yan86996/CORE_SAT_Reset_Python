@@ -280,9 +280,15 @@ class CORE:
         
     def read_pump_power_csvs(self):
         for key, value in self.pump_dev_map.items():
-            pump_csv = os.path.join(self.folder_dir, 'AV_3050090.csv')        
-            pump_data_AV = np.genfromtxt(pump_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
-            pump_power = pump_data_AV['Present_Value'][np.char.find(pump_data_AV['Object_Name'], value) >= 0][0]
+            try:
+                pump_csv = os.path.join(self.folder_dir, 'AV_3050090.csv')        
+                pump_data_AV = np.genfromtxt(pump_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')
+                pump_power = pump_data_AV['Present_Value'][np.char.find(pump_data_AV['Object_Name'], value) >= 0][0]
+            
+            except Exception as e:
+                print(e)
+                print(f'******* Failed to read pump power csvs for {self.ahu_name} *******')
+                pump_power = np.nan
             
             self.ts_data.append(pump_power) # log 
             self.ts_header.append(key + ' power(kW)') # log
@@ -563,23 +569,19 @@ class CORE:
                                'fan_cost_delta_lo',    'fan_cost_delta',    'fan_cost_delta_hi',
                                'diff_zone_tot_afr_lo', 'diff_zone_tot_afr', 'diff_zone_tot_afr_hi',
                               ]
-
+            
             # combine all vars to save 
             data2save = core_cal_list + self.ts_data
             header = core_cal_header + self.ts_header
-
+                    
+            # read and log HW and CHW pump power data
+            self.read_pump_power_csvs()
+            
             self.save_data_bydate(data2save, header, self.folder_dir, self.ahu_name)
                                 
         except Exception as e:
             print(e)
-            print('******* Failed to run CORE *******')  
-        
-        # read and log HW and CHW pump power data
-        try:
-            self.read_pump_power_csvs()
-        except Exception as e:
-            print(e)
-            print(f'******* Failed to read pump power csvs for {self.ahu_name} *******')
+            print('******* Failed to run CORE *******')
         
         print('-' * 80)
 
