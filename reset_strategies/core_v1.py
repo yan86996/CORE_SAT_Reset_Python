@@ -569,14 +569,14 @@ class CORE:
                                'fan_cost_delta_lo',    'fan_cost_delta',    'fan_cost_delta_hi',
                                'diff_zone_tot_afr_lo', 'diff_zone_tot_afr', 'diff_zone_tot_afr_hi',
                               ]
+
+            # read and log HW and CHW pump power data
+            self.read_pump_power_csvs()
             
             # combine all vars to save 
             data2save = core_cal_list + self.ts_data
             header = core_cal_header + self.ts_header
-                    
-            # read and log HW and CHW pump power data
-            self.read_pump_power_csvs()
-            
+                       
             self.save_data_bydate(data2save, header, self.folder_dir, self.ahu_name)
                                 
         except Exception as e:
