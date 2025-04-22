@@ -2,7 +2,7 @@ if __name__=='__main__':
     import os, sys
     import time
     from datetime import datetime, date
-    import pdb 
+    
     # set the working directory to be where this script is located
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     os.chdir(script_dir)
@@ -14,6 +14,7 @@ if __name__=='__main__':
     import zone_requests
     from g36 import G36
     from core_v1 import CORE
+    from email_utils import send_email
     
     ###
     ## loading the mapping dictionary (processed) data
@@ -21,7 +22,6 @@ if __name__=='__main__':
     from mapping_data import *
     from rand_dates import *
     
-    # initialization
     folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test2'))
     core_version = 'v1'
     max_off_time = 1
@@ -43,15 +43,14 @@ if __name__=='__main__':
     elif date.today() in rand_dates_G36:
         algo = 1 # G36
     elif date.today() in rand_dates_CORE:
-        algo = 2 # CORE      
+        algo = 2 # CORE
     else:
         raise ValueError("Today is not in any of the rand rates")
     
     # zone list (zones_5, zones_6, zones_7) extracted by extract_dev_ID.py
     zones_and_ahus = [(zones_5, 'AHU_5', num_ignore_ahu5), (zones_6, 'AHU_6', num_ignore_ahu6), (zones_7, 'AHU_7', num_ignore_ahu7)]
-
-    for zones, ahu, num_ignore in zones_and_ahus:
         
+    for zones, ahu, num_ignore in zones_and_ahus:    
         try:
             # instantiate temp requests objects
             clg_requests = zone_requests.Clg_Request(verbose=False, folder_dir = folder_dir, zone_dev_map = devID_zoneID, zone_names=zones,                                                 
@@ -95,7 +94,6 @@ if __name__=='__main__':
             ## CORE control
             ###
             diff_sat = [-0.5, 0, 0.5]
-
             
             core_control = CORE(algo=algo, core_version=core_version, max_off_time=max_off_time, dehumid=dehumid, dehumd_limits=dehumd_limits, g36_sat=g36_sat, folder_dir=folder_dir, zone_names=zones, ahu_name=ahu,        
                                 zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID, pump_dev_map=devID_pumpID, ahu_dev_map=devID_ahuID,
@@ -106,13 +104,30 @@ if __name__=='__main__':
             
             if algo == 0:
                 print('### Baseline control used ###')
-        
+            
+            # log time to a text file            
+            log_dir = os.path.abspath(os.path.join(folder_dir, 'log', ahu +'_log_time.txt'))
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(log_dir, "w") as file:
+                file.write(f"last run for {ahu}:{now}")
+
         except Exception as e:
             print(e)
+            log_dir = os.path.abspath(os.path.join(folder_dir, 'log', ahu +'_log_time.txt'))
+            
+            # get the last good run time
+            with open(log_dir, "r") as file:
+                last_time_str = file.read().split(':', 1)[-1]
+                last_time = datetime.strptime(last_time_str, "%Y-%m-%d %H:%M:%S")
+                time_elapsed = (datetime.now() - last_time).total_seconds()
+            
+            # send warning emails if down time is over 1 hour
+            if time_elapsed > 3600:
+                email_list = ['TJayarathne@trccompanies.com', 'yan.wang@berkeley.edu', 'jbursill@deltacontrols.com']
+                send_email(email_list, f'ISSUES WITH CORE APP IN {ahu} OF FORDHAM BLDG', '[CORE SAT Reset Issue]')
             
     # move algo values into AV_3050090.csv
     filtered_rows  = []
-    
     for _, value in devID_ahuID.items():
         out_csv = os.path.join(folder_dir, f'AV_{value}_out.csv')
         data = np.genfromtxt(out_csv, delimiter=',', dtype=str, encoding='utf-8')
