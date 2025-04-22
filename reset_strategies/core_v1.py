@@ -4,7 +4,7 @@ import csv
 import time
 from datetime import datetime
 import numpy as np
-import util_rate
+from util_rate import electricity_price, steam_price
 import pdb 
 #######
 ### Changes to V1 
@@ -137,7 +137,7 @@ class CORE:
         except Exception as e:
             print(e)
             print(f'Failed to find AI_{self.ahu_dev_ID}.csv')
-        
+            
         # from AO_XXXX.csv
         # clg coil valve
         try:
@@ -167,7 +167,29 @@ class CORE:
         except Exception as e:
             print(e)
             print(f'Failed to find AO_{self.ahu_dev_ID}.csv')
-             
+    
+    def read_ahu_mode(self):
+        # from MV_XXXX.csv
+        try:
+            ahu_csv_MV = os.path.join(self.folder_dir, f'MV_{self.ahu_dev_ID}.csv')
+            ahu_data_MV = np.genfromtxt(ahu_csv_MV, delimiter=',', dtype=None, names=True, encoding='utf-8')
+            
+            # ahu status
+            self.ahu_status = ahu_data_MV['Present_Value'][np.char.find(ahu_data_MV['Object_Name'], 'Unit Status') >= 0][0] 
+            self.ts_data.append(self.ahu_status) # log
+            self.ts_header.append('ahu status') # log
+            
+            # ahu mode
+            self.ahu_mode = ahu_data_MV['Present_Value'][np.char.find(ahu_data_MV['Object_Name'], 'Unit Mode') >= 0][0] 
+            self.ts_data.append(self.ahu_mode) # log
+            self.ts_header.append('ahu mode') # log
+        
+        except Exception as e:
+            print(e)
+            print(f'Failed to find MV_{self.ahu_dev_ID}.csv')
+            self.ts_data.append(np.nan) # log
+            self.ts_header.append('ahu mode') # log
+            
     def read_vfd_power_csvs(self):
         # vfd power (TO CHANGE)
         vfd_dev_ID = self.vdf_dev_map[self.ahu_name] 
@@ -207,9 +229,7 @@ class CORE:
     def read_hist_vars_csvs(self):    
        # check if logging var in AV_3050090.csv
         log_AV_csv = os.path.join(self.folder_dir, 'AV_3050090.csv')
-        
-        print('running the new version')
-        
+                
         if os.path.isfile(log_AV_csv):
             log_data_AV = np.genfromtxt(log_AV_csv, delimiter=',', dtype=None, names=True, encoding='utf-8')          
             
@@ -222,9 +242,7 @@ class CORE:
                 self.ts_data.append(self.chw_coils_hist) # log 
             
             self.ts_header.append('chw_coils_hist from AV_3050090') # log
-            
-            print('chw_coils_hist from AV_3050090')
-            
+                        
             # check if clg_coil_clo_temp_chg already exists
             if ('clg_coil_clo_temp_chg_'+self.ahu_name) not in log_data_AV['Object_Name']:
                 self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name] = 2
@@ -234,9 +252,7 @@ class CORE:
                 self.ts_data.append(self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name]) # log 
             
             self.ts_header.append('clg_coil_clo_temp_chg from AV_3050090') # log
-            
-            print('clg_coil_clo_temp_chg from AV_3050090')
-            
+                        
             # check if rhv_coils_hist already exists
             for vav in self.vavs:
                 if ('rhv_coils_hist_' + vav) not in log_data_AV['Object_Name']:
@@ -435,7 +451,6 @@ class CORE:
                 # estimate power consumption values under different setpoints
                 self.estimate_power(self.cur_satsp, diff_sat)         
 
-                # comfort constraint present
                 # cooling request
                 if self.clg_requests.R_clg > self.num_ignore:
                     # use trim and respond without outside air based SAT setpoint limits
@@ -455,13 +470,13 @@ class CORE:
                 else:
                     print(f'###### No comofort request, CORE runs for {self.ahu_name} ######') 
 
-                    # util_rate.price(datetime_obj, 2)
-                    elec_price = 0.2 # TO CHANGE                
-                    steam_price = (51.972/1000)
+                    # util rate
+                    elec_pr = electricity_price(datetime.now())              
+                    steam_pr = steam_price(datetime.now()) 
                     
-                    self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 * 18 * steam_price # 0.7 COP = 18 lbs/ ton of clg
-                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 / 950 * steam_price  # steam (950 BTU/lb)
-                    self.estimations['fan_cost_delta'] = elec_price * self.estimations['fan_power_delta']
+                    self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 * 18 * steam_pr # 0.7 COP = 18 lbs/ ton of clg
+                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 / 950 * steam_pr  # steam (950 BTU/lb)
+                    self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
                     self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']
                     
                     idx_opt = np.argmin(self.estimations['tot_cost_delta'])                   
@@ -557,11 +572,11 @@ class CORE:
                              self.estimations['rhv_cost_delta'], self.estimations['fan_cost_delta'], self.estimations['diff_zone_tot_afr']]
             
             core_cal_list = np.concatenate([arr.flatten() for arr in core_cal_list]).tolist() 
-            core_cal_list = [self.g36_sat, new_core_sat,
-                             self.core_version, self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name], self.chw_coils_hist] + core_cal_list   
+            core_cal_list = [self.g36_sat, new_core_sat, self.core_version, 
+                             self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name], self.chw_coils_hist] + core_cal_list   
             
-            core_cal_header = ['G36 satsp '+self.ahu_name, 'CORE satsp '+self.ahu_name,
-                               'core_version',   ' clg_coil_clo_temp_chg_'+self.ahu_name, 'chw_coils_hist_'+self.ahu_name,  
+            core_cal_header = ['G36 satsp', 'CORE satsp', 'core_version',
+                               'clg_coil_clo_temp_chg_'+self.ahu_name, 'chw_coils_hist_'+self.ahu_name,  
                                'candidate_sat_lo',     'candidate_sat',     'candidate_sat_hi', 
                                'tot_cost_delta_lo',    'tot_cost_delta',    'tot_cost_delta_hi',
                                'chw_cost_delta_lo',    'chw_cost_delta',    'chw_cost_delta_hi',
@@ -569,14 +584,14 @@ class CORE:
                                'fan_cost_delta_lo',    'fan_cost_delta',    'fan_cost_delta_hi',
                                'diff_zone_tot_afr_lo', 'diff_zone_tot_afr', 'diff_zone_tot_afr_hi',
                               ]
-
             # read and log HW and CHW pump power data
             self.read_pump_power_csvs()
+            self.read_ahu_mode()
             
-            # combine all vars to save 
+            # combine all vars to save
             data2save = core_cal_list + self.ts_data
             header = core_cal_header + self.ts_header
-                       
+            
             self.save_data_bydate(data2save, header, self.folder_dir, self.ahu_name)
                                 
         except Exception as e:
