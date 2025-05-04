@@ -13,7 +13,7 @@ rand_dates_G36 = np.array([dt.date(2024, 11, 23),   dt.date(2024, 12, 6),
 
 # TO CHANGE
 start_date = dt.date(2025, 2, 1)
-end_date = dt.date(2025, 4, 30)
+end_date = dt.date(2025, 6, 30)
 # Generate continuous dates
 num_days = (end_date - start_date).days + 1
 rand_dates_CORE = np.array([start_date + dt.timedelta(days=i) for i in range(num_days)])             
