@@ -128,6 +128,12 @@ if __name__=='__main__':
             
     # move algo values into AV_3050090.csv
     filtered_rows  = []
+    
+    # filtered data from AV_3050090
+    add_data = np.genfromtxt(os.path.join(folder_dir, 'AV_3050090.csv'), delimiter=',', dtype=str, encoding='utf-8')[:24]
+    add_data[1:, 2] = np.arange(1, len(add_data))
+    filtered_rows.append(add_data[1:])
+    
     for _, value in devID_ahuID.items():
         out_csv = os.path.join(folder_dir, f'AV_{value}_out.csv')
         data = np.genfromtxt(out_csv, delimiter=',', dtype=str, encoding='utf-8')
@@ -140,11 +146,11 @@ if __name__=='__main__':
     
         # Combine filtered data with the header
         if filtered_rows:
-            header = ('device','object-type','instance', 'Object_Name', 'Present_Value', 'Units')
+            header = ('device','object-type','instance', 'Object_Name', 'Present_Value', 'Units') 
             filtered_data = np.vstack([header] + filtered_rows)
-            
-            filtered_data[1:, 2] = np.arange(10001, 10001 + len(filtered_data) -1)
+            filtered_data[len(add_data):, 2] = np.arange(10001, 10001 + len(filtered_data) - len(add_data))
             filtered_data[:, -1] = ''
+            
             # Save to a new CSV file
             output_path =  os.path.join(folder_dir, 'AV_3050090_out.csv')
             np.savetxt(output_path, filtered_data, delimiter=",", fmt="%s")
@@ -152,5 +158,5 @@ if __name__=='__main__':
             # Provide the file for download
             output_path
         else:
-            output_path = "No matching rows found."
+            output_path = "No matching rows found"
         
