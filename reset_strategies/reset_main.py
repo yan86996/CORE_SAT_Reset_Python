@@ -130,7 +130,7 @@ if __name__=='__main__':
     filtered_rows  = []
     
     # filtered data from AV_3050090
-    add_data = np.genfromtxt(os.path.join(folder_dir, 'AV_3050090.csv'), delimiter=',', dtype=str, encoding='utf-8')[:24]
+    add_data = np.genfromtxt(os.path.join(folder_dir, 'AV_3050090.csv'), delimiter=',', dtype=str, encoding='utf-8')[:26]
     add_data[1:, 2] = np.arange(1, len(add_data))
     filtered_rows.append(add_data[1:])
     
