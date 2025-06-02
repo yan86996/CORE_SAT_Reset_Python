@@ -17,10 +17,11 @@ class Reset:
     SPres-max	Maximum response per time interval
     """
     
-    def __init__(self, SPmin=None, SPmax=None, num_ignore=None, SPtrim=None, SPres=None, SPres_max=None):        
+    def __init__(self, SPmin=None, SPmax=None, num_ignore_clg=None, num_ignore_htg=None, SPtrim=None, SPres=None, SPres_max=None):        
         self.SPmin = SPmin
         self.SPmax = SPmax
-        self.num_ignore = num_ignore
+        self.num_ignore_clg = num_ignore_clg
+        self.num_ignore_htg = num_ignore_htg
         self.SPtrim = SPtrim
         self.SPres = SPres
         self.SPres_max = SPres_max
@@ -28,7 +29,7 @@ class Reset:
     def get_new_sp_clg(self, R, SP, verbose=False):
         """ R = number of requests, weighted by zone importance"""
         # calculate the response
-        response = self.SPtrim + self.SPres * max(R - self.num_ignore,0.0)
+        response = self.SPtrim + self.SPres * max(R - self.num_ignore_clg,0.0)
         
         # limit the response per timestep to SPres_max
         response = self.SPres_max if abs(response) > \
@@ -44,7 +45,7 @@ class Reset:
     def get_new_sp_htg(self, R, SP, verbose=False):
         """ R = number of requests, weighted by zone importance"""
         #calculate the response
-        response = -self.SPtrim - self.SPres * max(R - self.num_ignore,0.0)
+        response = -self.SPtrim - self.SPres * max(R - self.num_ignore_htg,0.0)
         
         # limit the response per timestep to SPres_max
         response = -self.SPres_max if abs(response) > \
