@@ -13,7 +13,7 @@ import pdb
 
 class CORE:
     def __init__(self, algo=None, core_version=None, max_off_time=None, dehumid=None, folder_dir=None, dehumd_limits=None, g36_sat=None, zone_dev_map=None, zone_names=None, 
-                 ahu_name=None, vdf_dev_map=None, ahu_dev_map=None, pump_dev_map=None, zone_requests=None, reset=None, num_ignore=None, diff_sat=None,                              
+                 ahu_name=None, vdf_dev_map=None, ahu_dev_map=None, pump_dev_map=None, zone_requests=None, reset=None, num_ignore_clg=None, num_ignore_htg=None, diff_sat=None,                              
                  ):
         self.algo = algo
         self.core_version = core_version
@@ -44,7 +44,9 @@ class CORE:
         self.min_sat_sp = self.reset.SPmin
         self.max_sat_sp = self.reset.SPmax
         
-        self.num_ignore = num_ignore
+        self.num_ignore_clg = num_ignore_clg
+        self.num_ignore_htg = num_ignore_htg
+        
         self.vavs = zone_names
         self.flow_min = 'Minimum Airflow Setpoint'
         self.flow_max = 'Maximum Airflow Setpoint'
@@ -164,6 +166,14 @@ class CORE:
             self.ts_data.append(self.oa_damper) # log
             self.ts_header.append('outside air damper') # log
             
+            # vfd %
+            vfds = ahu_data_AO['Object_Name'][np.char.find(ahu_data_AO['Object_Name'], 'VFD Speed') >= 0]
+            for vfd in vfds:
+                vfd_name = vfd.replace('140W62nd - ', '')
+                vdf_speed = ahu_data_AO['Present_Value'][np.char.find(ahu_data_AO['Object_Name'], vfd_name) >= 0][0]
+                self.ts_data.append(vdf_speed) # log
+                self.ts_header.append(vfd_name + '(%)') # log
+                
         except Exception as e:
             print(e)
             print(f'Failed to find AO_{self.ahu_dev_ID}.csv')
@@ -197,15 +207,22 @@ class CORE:
         vfd_rf_power = 0
         
         for key, value in vfd_dev_ID.items():
+            csv_AV = os.path.join(self.folder_dir, 'AV_3050090.csv')
             # get supply fan(s)
             if 'SF' in key.upper():
                 try:
-                    sf_csv_AV = os.path.join(self.folder_dir, 'AV_3050090.csv')
-                    sf_data_AV = np.genfromtxt(sf_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
-                    sf_power = sf_data_AV['Present_Value'][np.char.find(sf_data_AV['Object_Name'], value) >= 0][0]
+                    sf_data_AV = np.genfromtxt(csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
+                    
+                    # power
+                    sf_power = sf_data_AV['Present_Value'][np.char.find(sf_data_AV['Object_Name'], value+'_POWER') >= 0][0]
                     vfd_sf_power += sf_power
-                    self.ts_data.append(sf_power) # log 
+                    self.ts_data.append(sf_power) # log
                     self.ts_header.append(self.ahu_name + ' ' + key + ' power(kW) ') # log
+                    
+                    # speed rpm
+                    sf_speed = sf_data_AV['Present_Value'][np.char.find(sf_data_AV['Object_Name'], value+'_SPEED') >= 0][0]
+                    self.ts_data.append(sf_speed) # log
+                    self.ts_header.append(self.ahu_name + ' ' + key + ' speed(RPM) ') # log
                     
                 except Exception as e:
                     print(e)
@@ -213,16 +230,22 @@ class CORE:
             # get return fan(s)
             if 'RF' in key.upper():
                 try:
-                    rf_csv_AV = os.path.join(self.folder_dir, 'AV_3050090.csv')
-                    rf_data_AV = np.genfromtxt(rf_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
-                    rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], value) >= 0][0]
+                    rf_data_AV = np.genfromtxt(csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
+                    
+                    # power
+                    rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], value+'_POWER') >= 0][0]
                     vfd_rf_power += rf_power
                     self.ts_data.append(rf_power) # log
                     self.ts_header.append(self.ahu_name + ' ' + key + ' power(kW) ') # log
                     
+                    # speed rpm
+                    rf_speed = rf_data_AV['Present_Value'][np.char.find(sf_data_AV['Object_Name'], value+'_SPEED') >= 0][0]
+                    self.ts_data.append(rf_speed) # log
+                    self.ts_header.append(self.ahu_name + ' ' + key + ' speed(RPM) ') # log
+       
                 except Exception as e:
                     print(e)
-
+                    
         self.vfd_sf_power = vfd_sf_power  # KW
         self.vfd_rf_power = vfd_rf_power  # KW
         
@@ -333,7 +356,7 @@ class CORE:
                     last_CORE_row = row
         
         # CORE
-        last_CORE_SAT = last_CORE_row['CORE satsp ' + self.ahu_name]
+        last_CORE_SAT = last_CORE_row['CORE satsp']
         last_CORE_time = last_CORE_row['TimeStamp']
         dt_CORE = datetime.strptime(last_CORE_time, '%Y-%m-%d %H:%M')
         time_CORE_lapesd = (now - dt_CORE).total_seconds()/3600
@@ -448,18 +471,30 @@ class CORE:
             
             # run CORE calculations
             try:
-                # estimate power consumption values under different setpoints
+                # estimate power consumption values under different setpoints for G36
+                self.estimate_power_G36(self.g36_sat, diff_sat)
+                
+                # estimate power consumption values under different setpoints for CORE
                 self.estimate_power(self.cur_satsp, diff_sat)         
+                
+                # util rate
+                elec_pr = electricity_price(datetime.now())              
+                steam_pr = steam_price(datetime.now()) 
+                
+                self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
+                self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
+                self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
+                self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']
 
                 # cooling request
-                if self.clg_requests.R_clg > self.num_ignore:
+                if self.clg_requests.R_clg > self.num_ignore_clg:
                     # use trim and respond without outside air based SAT setpoint limits
                     new_core_sat = self.reset.get_new_sp_clg(self.clg_requests.R_clg, self.cur_satsp)
                     core_finish = 3
                     print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for cooling requests ######')
                     
                 # heating request
-                elif self.htg_requests.R_htg > self.num_ignore:
+                elif self.htg_requests.R_htg > self.num_ignore_htg:
                     # use trim and respond without outside air based SAT setpoint limits
                     new_core_sat = self.reset.get_new_sp_htg(self.htg_requests.R_htg, self.cur_satsp)
                     core_finish = 2
@@ -468,22 +503,18 @@ class CORE:
                 # no comfort present
                 # run CORE algorithm
                 else:
-                    print(f'###### No comofort request, CORE runs for {self.ahu_name} ######') 
-
-                    # util rate
-                    elec_pr = electricity_price(datetime.now())              
-                    steam_pr = steam_price(datetime.now()) 
-                    
-                    self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 * 18 * steam_pr # 0.7 COP = 18 lbs/ ton of clg
-                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 / 950 * steam_pr  # steam (950 BTU/lb)
-                    self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
-                    self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']
-                    
+                    print(f'###### No comofort request, CORE runs for {self.ahu_name} ######')                                      
                     idx_opt = np.argmin(self.estimations['tot_cost_delta'])                   
                     new_core_sat = self.cur_satsp + diff_sat[idx_opt]
                     
                     core_finish = 1
                 
+                # update cost estimation for G36 but NOT used for SAT selection
+                self.estimations['chw_cost_delta_G36'] = self.estimations['chw_power_delta_G36']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
+                self.estimations['rhv_cost_delta_G36'] = self.estimations['rhv_power_delta_G36']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
+                self.estimations['fan_cost_delta_G36'] = self.estimations['fan_power_delta_G36'] * elec_pr
+                self.estimations['tot_cost_delta_G36'] = self.estimations['chw_cost_delta_G36'] + self.estimations['rhv_cost_delta_G36'] + self.estimations['fan_cost_delta_G36']
+
             except Exception as e:
                 print(e)
                 if time_CORE_lapesd < self.max_off_time:
@@ -568,22 +599,31 @@ class CORE:
             ## save time-series vars on a daily basis
             ###
             # CORE cal values
-            core_cal_list = [candidate_sat, self.estimations['tot_cost_delta'], self.estimations['chw_cost_delta'],
-                             self.estimations['rhv_cost_delta'], self.estimations['fan_cost_delta'], self.estimations['diff_zone_tot_afr']]
+            core_cal_list = [candidate_sat, 
+                             self.estimations['tot_cost_delta'],     self.estimations['chw_cost_delta'],     self.estimations['rhv_cost_delta'],     self.estimations['fan_cost_delta'],    self.estimations['diff_zone_tot_afr'],                              
+                             self.estimations['tot_cost_delta_G36'], self.estimations['chw_cost_delta_G36'], self.estimations['rhv_cost_delta_G36'], self.estimations['fan_cost_delta_G36'],                                                                       
+                            ]
             
             core_cal_list = np.concatenate([arr.flatten() for arr in core_cal_list]).tolist() 
             core_cal_list = [self.g36_sat, new_core_sat, self.core_version, 
                              self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name], self.chw_coils_hist] + core_cal_list   
             
             core_cal_header = ['G36 satsp', 'CORE satsp', 'core_version',
-                               'clg_coil_clo_temp_chg_'+self.ahu_name, 'chw_coils_hist_'+self.ahu_name,  
+                               'clg_coil_clo_temp_chg_'+self.ahu_name, 'chw_coils_hist_'+self.ahu_name,
+                               # CORE scenario deltas
                                'candidate_sat_lo',     'candidate_sat',     'candidate_sat_hi', 
                                'tot_cost_delta_lo',    'tot_cost_delta',    'tot_cost_delta_hi',
                                'chw_cost_delta_lo',    'chw_cost_delta',    'chw_cost_delta_hi',
                                'rhv_cost_delta_lo',    'rhv_cost_delta',    'rhv_cost_delta_hi',
                                'fan_cost_delta_lo',    'fan_cost_delta',    'fan_cost_delta_hi',
                                'diff_zone_tot_afr_lo', 'diff_zone_tot_afr', 'diff_zone_tot_afr_hi',
-                              ]
+                               # G36 scenario deltas
+                               'tot_cost_delta_lo_G36',    'tot_cost_delta_G36',    'tot_cost_delta_hi_G36',
+                               'chw_cost_delta_lo_G36',    'chw_cost_delta_G36',    'chw_cost_delta_hi_G36',
+                               'rhv_cost_delta_lo_G36',    'rhv_cost_delta_G36',    'rhv_cost_delta_hi_G36',
+                               'fan_cost_delta_lo_G36',    'fan_cost_delta_G36',    'fan_cost_delta_hi_G36',
+                              ] 
+             
             # read and log HW and CHW pump power data
             self.read_pump_power_csvs()
             self.read_ahu_mode()
@@ -599,7 +639,58 @@ class CORE:
             print('******* Failed to run CORE *******')
         
         print('-' * 80)
-
+    
+    ######
+    ### zone temp montioring 
+    ######
+    def find_bad_zones(self, temp_dev=5):
+        # bad zones: (2 degrees wider than htg/clg setpoint) or (below 65 or above 78F)
+        bad_zones = []     
+        # loop through each zone vav box
+        for vav in self.vavs:
+            div_ID = self.zone_dev_map[vav]
+            
+            # from AV_XXXX.csv
+            try:
+                zone_csv_AV = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+                zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
+            except Exception as e:
+                print(e)
+                print(f'Failed to find AV_{div_ID}.csv') 
+                
+            # heating setpoint
+            htg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Heating Setpoint') >= 0][0]
+            self.ts_data.append(htg_sp) # log 
+            self.ts_header.append(vav +' heating setpoint') # log
+            
+            # cooling setpoint
+            clg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Cooling Setpoint') >= 0][0]             
+            self.ts_data.append(clg_sp) # log 
+            self.ts_header.append(vav +' cooling setpoint') # log
+            
+            # room temp
+            room_temp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Space Temperature') >= 0][0]        
+            self.ts_data.append(room_temp) # log 
+            self.ts_header.append(vav +' room temp') # log
+            
+            now = datetime.now().strftime("%Y-%m-%d %H:%M")
+            # zone temp monitoring
+            # 5F (default) wider than the htg - clg setpoint range
+            if (room_temp < htg_sp - temp_dev) or (room_temp > clg_sp + temp_dev):
+                bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, {temp_dev}F wider than the heating {htg_sp}F - cooling {clg_sp}F setpoint range')
+            # below 65 or above 78F
+            elif (room_temp <65) or (room_temp > 78):
+                bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, below 65F or above 78F')             
+                    
+        # sat or sat setpoint not in 55-65F
+        if (self.cur_sat < 55) or (self.cur_sat > 65):
+            bad_zones.append(f'the SAT OF {self.ahu_name} at {now} is {self.cur_sat}, not within 55-65F')
+        
+        if (self.cur_satsp < 55) or (self.cur_satsp > 65):
+            bad_zones.append(f'the SAT setpoint OF {self.ahu_name} at {now} is {self.cur_sat}, not within 55-65F')
+            
+        return bad_zones
+    
     ######
     ### Zone level calculations for reheat power and airflow under different SAT setpoints
     ######
@@ -616,13 +707,13 @@ class CORE:
         # loop through each zone vav box
         for vav in self.vavs:
             div_ID = self.zone_dev_map[vav]
-                        
+            
             # from AI_XXXX.csv
             try:
                 zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
             except Exception as e:
                 print(e)
-                print(f'Failed to find AI_{div_ID}.csv') 
+                print(f'Failed to find AI_{div_ID}.csv')
             
             zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8')
 
@@ -648,17 +739,17 @@ class CORE:
             # from AV_XXXX.csv
             try:
                 zone_csv_AV = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+                zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
             except Exception as e:
                 print(e)
                 print(f'Failed to find AV_{div_ID}.csv') 
             
             # min airflow
             try:
-                zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
                 afr_min = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_min)>= 0][0]
             except Exception as e:
                 print(e)
-                print(f'Failed to AV_{div_ID}.csv or min airflow data')
+                print(f'Failed to find min airflow data in AV_{div_ID}.csv')
                 
             self.ts_data.append(afr_min) # log 
             self.ts_header.append(vav +' min air flow rate') # log       
@@ -672,8 +763,8 @@ class CORE:
             clg = (zone_afr - afr_min)/(afr_max - afr_min) * 100
             
             # heating setpoint
-            hg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Heating Setpoint') >= 0][0]
-            self.ts_data.append(hg_sp) # log 
+            htg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Heating Setpoint') >= 0][0]
+            self.ts_data.append(htg_sp) # log 
             self.ts_header.append(vav +' heating setpoint') # log
             
             # cooling setpoint
@@ -685,7 +776,7 @@ class CORE:
             room_temp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Space Temperature') >= 0][0]        
             self.ts_data.append(room_temp) # log 
             self.ts_header.append(vav +' room temp') # log
-                        
+            
             # reheat
             reheat_pos = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Reheat Valve Position') >= 0][0]
             self.ts_data.append(reheat_pos) # log 
@@ -702,7 +793,7 @@ class CORE:
             self.ts_header.append(vav +' damper position') # log
             
             # calculate AFR difference under different SAT setpoints
-            diff_zone_afr = self.calc_diff_zone_afr(reheat_pos, cur_sat_sp, diff_sat, zone_afr, hg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
+            diff_zone_afr = self.calc_diff_zone_afr(reheat_pos, cur_sat_sp, diff_sat, zone_afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
             self.estimations['diff_zone_tot_afr'] += diff_zone_afr
             new_zone_afr = zone_afr + diff_zone_afr
             
@@ -730,8 +821,8 @@ class CORE:
                 diff_rhv_power = self.calc_heat_flow(new_zone_afr, delta_T)
                 self.ts_data += np.concatenate([arr.flatten() for arr in diff_rhv_power]).tolist() # log 
                 
-            self.ts_header += [vav+' rhv power for lo SAT (BTU/h)', vav+' rhv power for cur SAT (BTU/h)', vav+' rhv power for hi SAT (BTU/h)', ] # log                                  
-                                             
+            self.ts_header += [vav+' rhv power for lo SAT (BTU/h)', vav+' rhv power for cur SAT (BTU/h)', vav+' rhv power for hi SAT (BTU/h)', ] # log
+        
         diff_afr = self.estimations['diff_zone_tot_afr']
         afr_ratio = (afr + diff_afr)/afr
         
@@ -746,20 +837,19 @@ class CORE:
         
         fan_power_delta = diff_fan_power - cur_power
         
-        self.estimations['fan_power_delta_' + self.ahu_name] = fan_power_delta
         self.estimations['fan_power_delta'] += fan_power_delta
             
         # Chilled water temp change and power for each AHU under different SAT setpoints
         # estimate the inherent temperature change between in & out temperature    
-        if (self.ccv == 0) and (self.hcv == 0): 
+        if self.ccv == 0: 
             # valve closed during look-back window
-            if self.chw_coils_hist > 0:
+            if self.hcv == 0 and self.chw_coils_hist > 0:
                 # update coil closed temp change and return heat flow estimate of zero
-                self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] = ((self.cur_sat - self.mat)*0.01) + (0.99*self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name])
-            
-            # update trend/hist values
-            self.chw_coils_hist += 1
-            self.estimations['chw_power_delta_' + self.ahu_name] = np.zeros(len(diff_sat))
+                self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] = ((self.cur_sat - self.mat)*0.01) + (0.99*self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name])        
+                # update trend/hist values
+                self.chw_coils_hist += 1
+                
+            self.estimations['chw_power_delta'] = np.zeros(len(diff_sat))
             self.ts_data += [0, 0, 0] # log 
             
         else:
@@ -778,9 +868,102 @@ class CORE:
             # update trend/hist values
             self.chw_coils_hist = 0
             self.estimations['chw_power_delta'] = diff_chw_power - curr_chw_power
-        
+            print(self.ccv, diff_ahu_temp, curr_chw_power, self.estimations['chw_power_delta'])
+            
         self.ts_header += [' chw power for lo SAT (BTU/h)', ' chw power for cur SAT (BTU/h)', ' chw power for hi SAT (BTU/h)', ] # log
         self.estimations['diff_sat'] = diff_sat
+    
+    def estimate_power_G36(self, cur_sat_sp, diff_sat):
+        # difference from estimate_power: not updating the hist vars
+        num = len(diff_sat)
+        self.estimations['chw_power_delta_G36']   = np.zeros(num)
+        self.estimations['rhv_power_delta_G36']   = np.zeros(num)
+        self.estimations['fan_power_delta_G36']   = np.zeros(num)
+        self.estimations['diff_zone_tot_afr_G36'] = np.zeros(num)
+                
+        # init total zone airflow rate (afr)
+        afr = 0
+        
+        # loop through each zone vav box
+        for vav in self.vavs:
+            div_ID = self.zone_dev_map[vav]
+            
+            # from AI_XXXX.csv
+            zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')     
+            zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8')
+            # discharge air temperature
+            if any(np.char.find(zone_data_AI['Object_Name'], 'Supply Air Temperature') >= 0) :
+                zone_dat = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], 'Supply Air Temperature') >= 0][0]
+                if zone_dat < 0:
+                    zone_dat = self.cur_sat
+            else:
+                zone_dat = self.cur_sat
+            
+            # airflow
+            zone_afr = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], 'Airflow') >= 0][0]
+            # total zone afr update
+            afr += zone_afr       
+            # from AV_XXXX.csv
+            zone_csv_AV = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+            zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')  
+            # min airflow
+            afr_min = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_min)>= 0][0]
+            # max airflow
+            afr_max = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_max) >= 0][0]      
+            # cooling loop 
+            clg = (zone_afr - afr_min)/(afr_max - afr_min) * 100
+            # heating setpoint
+            htg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Heating Setpoint') >= 0][0]           
+            # cooling setpoint
+            clg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Cooling Setpoint') >= 0][0]             
+            # room temp
+            room_temp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Space Temperature') >= 0][0]        
+            # reheat
+            reheat_pos = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Reheat Valve Position') >= 0][0]
+            # calculate AFR difference under different SAT setpoints
+            diff_zone_afr = self.calc_diff_zone_afr(reheat_pos, cur_sat_sp, diff_sat, zone_afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
+            self.estimations['diff_zone_tot_afr_G36'] += diff_zone_afr
+            new_zone_afr = zone_afr + diff_zone_afr
+            
+            # VAV boxes with reheat
+            if reheat_pos == 0:
+                self.estimations['rhv_power_delta_G36'] += np.zeros(len(diff_sat))                
+            else:
+                self.estimations['rhv_power_delta_G36'] += self.calc_heat_flow(new_zone_afr, -diff_sat)
+        
+        diff_afr = self.estimations['diff_zone_tot_afr_G36']
+        afr_ratio = (afr + diff_afr)/afr
+        
+        ### fan power based on vfd percent out and motor rating
+        cur_power = self.vfd_sf_power + self.vfd_rf_power
+        diff_fan_power = cur_power * (afr_ratio ** 2.5) # fan laws
+        
+        self.ts_data += np.concatenate([arr.flatten() for arr in diff_fan_power]).tolist() # log 
+        self.ts_header += ['fan power for lo G36 SAT ', 'fan power for cur G36 SAT', ' fan power for hi G36 SAT', ] # log
+    
+        fan_power_delta = diff_fan_power - cur_power
+        self.estimations['fan_power_delta_G36'] += fan_power_delta
+            
+        # Chilled water temp change and power for each AHU under different SAT setpoints
+        if (self.ccv == 0) and (self.hcv == 0): 
+            # valve closed during look-back window
+            self.estimations['chw_power_delta_G36'] = np.zeros(len(diff_sat))
+            self.ts_data += [0, 0, 0]
+        else:
+            # return heat flow estimate for each candidate sat
+            curr_ahu_temp = cur_sat_sp - self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] - self.mat
+            curr_chw_power = np.maximum(0.0, -self.calc_heat_flow(afr, curr_ahu_temp))
+            diff_ahu_temp = cur_sat_sp + diff_sat - self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] - self.mat
+            
+            # clg coil power
+            diff_chw_power = np.maximum(0.0, -self.calc_heat_flow(afr + diff_afr, diff_ahu_temp))           
+            self.ts_data += np.concatenate([arr.flatten() for arr in diff_chw_power]).tolist() # log 
+            
+            # update trend/hist values
+            self.chw_coils_hist = 0
+            self.estimations['chw_power_delta_G36'] = diff_chw_power - curr_chw_power
+        
+        self.ts_header += [' chw power for lo G36 SAT (BTU/h)', ' chw power for cur G36 SAT (BTU/h)', ' chw power for hi G36SAT (BTU/h)', ] # log
     
     def log_data(self, newdata, ahu_data_AV, new_ahu_data_AV):
         var_in_csv = newdata[3]
@@ -800,10 +983,10 @@ class CORE:
         return volumetric_flow * delta_temperature * 1.08  # [Unit: BTU/hr]
     
     # get new air flow rate for different SATs
-    def calc_diff_zone_afr(self, reheat_pos, cur_sat, diff_sat, afr, hg_sp, clg_sp, room_temp, afr_min, afr_max, clg):      
+    def calc_diff_zone_afr(self, reheat_pos, cur_sat, diff_sat, afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg):      
         # heating or deadband
         # CHECK REHEAT POS RANGE/VALUE
-        if (reheat_pos > 20) or (hg_sp <= room_temp <= clg_sp) or (clg < 0.1):
+        if (reheat_pos > 20) or (htg_sp <= room_temp <= clg_sp) or (clg < 0.1):
             diff_zone_afr = np.zeros(len(diff_sat))
             
         # cooling
