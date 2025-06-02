@@ -3,10 +3,10 @@ from datetime import datetime
 import numpy as np
 
 class Requests:
-    """ This superclass calculates the number of requests
-    for each zone
+    """ This superclass calculates the number of requests for each zone
+
     """
-    def __init__(self, verbose=False, ignore=[], important=[], folder_dir = None, zone_names=None, zone_dev_map = None, room_temp=None, clg_setpoint=None, htg_setpoint=None,     
+    def __init__(self, verbose=False, ignore_zones=[], important=[], folder_dir = None, zone_names=None, zone_dev_map = None, room_temp=None, clg_setpoint=None, htg_setpoint=None,     
                  flow=None, flow_min=None, flow_max=None, damper=None, lim_dt_errs = 20, fdd=False, low_temp_cutoff=None, high_temp_cutoff=None):
 	           
         self.rR_clg = 0 # raw requests
@@ -14,7 +14,7 @@ class Requests:
         self.R_clg = 0 # importance weighted requests
         self.R_htg = 0 # importance weighted requests
         
-        self.ignore = ignore
+        self.ignore_zones = ignore_zones
         self.important = important
         self.zone_dev_map = zone_dev_map
         self.zd = {} # dict object representing all of the necessary zone data
@@ -42,14 +42,19 @@ class Requests:
 
     def handleAtypicalZones(self):
         # ignore any ignored zones
-        for z in sorted(self.ignore):
+        for z in sorted(self.ignore_zones):
             if z in self.zd:
                 del self.zd[z]        
         # ignore any zones missing essential data      
         for z in sorted(self.missingEssential):
             if z in self.zd:
                 del self.zd[z]  
-    
+        
+        # add importance factor
+        for z in sorted(self.important):
+          if z in self.zd:
+            self.zd[z]['importance'] = self.important[z]
+        
     def calcTotalRequests(self):
         # Sum up the total number of requests (and also weighted by importance)
         
@@ -64,7 +69,7 @@ class Requests:
             
                 rv = {'raw_clg_requests': self.rR_clg, 
                       'weighted_clg_requests': self.R_clg,                            
-                      'ignored_zones': self.ignore, 
+                      'ignored_zones': self.ignore_zones, 
                       'partial_zones': self.missingPartial,
                      }
             
@@ -75,14 +80,12 @@ class Requests:
                     self.R_htg += self.zd[z]['htg_requests'] * float(self.zd[z]['importance'])
                 else:
                     self.R_htg += self.zd[z]['htg_requests']
-                          
-               
-        
+                                        
         rv = {'raw_clg_requests': self.rR_clg, 
              'weighted_clg_requests': self.R_clg,
              'raw_htg_requests': self.rR_htg, 
              'weighted_htg_requests': self.R_htg,
-             'ignored_zones': self.ignore, 
+             'ignored_zones': self.ignore_zones, 
              'partial_zones': self.missingPartial,
              }
         
@@ -92,7 +95,7 @@ class Requests:
             print('Total importance-weighted cooling requests: ' + str(self.R_clg))
             print('Total raw heating requests: ' + str(self.rR_htg))
             print('Total importance-weighted cooling requests: ' + str(self.R_htg))
-            if len(self.ignore):
+            if len(self.ignore_zones):
                 print('Ignored zones (user selected): ')
             if len(self.missingEssential):   
                 print('Ignored zones (due to missing essential data): ')
@@ -285,7 +288,6 @@ class Clg_Request(Requests):
                 if self.zd[z]['cooling_loop'] >= 95:
                     print(str(z))
                     
-
 class Htg_Request(Requests):
     def __init__(self, *args, **kwargs):
         super(Htg_Request, self).__init__(*args, **kwargs)
@@ -302,7 +304,6 @@ class Htg_Request(Requests):
             if 'htg_setpoint' in self.zd[z]:
                 del self.zd[z]['htg_setpoint']
                 
-        
         for zone_name in self.zone_names:
             self.zd[zone_name] = {}
             try: 
