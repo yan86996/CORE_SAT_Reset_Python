@@ -643,7 +643,7 @@ class CORE:
     ######
     ### zone temp montioring 
     ######
-    def find_bad_zones(self, temp_dev):
+    def find_bad_zones(self, zone_temp_dev, zone_temp_lo, zone_temp_hi):
         # bad zones: (2 degrees wider than htg/clg setpoint) or (below 65 or above 78F)
         bad_zones = []     
         # loop through each zone vav box
@@ -676,11 +676,11 @@ class CORE:
             now = datetime.now().strftime("%Y-%m-%d %H:%M")
             # zone temp monitoring
             # 5F (default) wider than the htg - clg setpoint range
-            if (room_temp < htg_sp - temp_dev) or (room_temp > clg_sp + temp_dev):
-                bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, {temp_dev}F wider than the heating {htg_sp}F - cooling {clg_sp}F setpoint range')
-            # below 65 or above 78F
-            elif (room_temp <65) or (room_temp > 78):
-                bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, below 65F or above 78F')             
+            if (room_temp < htg_sp - zone_temp_dev) or (room_temp > clg_sp + zone_temp_dev):
+                bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, {zone_temp_dev}F wider than the heating {htg_sp}F - cooling {clg_sp}F setpoint range')
+            # below zone_temp_lo (such as 65) or above zone_temp_lo (such as 78F)
+            elif (room_temp <zone_temp_lo) or (room_temp > zone_temp_hi):
+                bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, below {zone_temp_lo}F or above {zone_temp_hi}F')             
                     
         # sat or sat setpoint not in 55-65F
         if (self.cur_sat < 55) or (self.cur_sat > 65):
