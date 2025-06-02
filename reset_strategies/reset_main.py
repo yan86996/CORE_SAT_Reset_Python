@@ -117,7 +117,7 @@ if __name__=='__main__':
                 file.write(f"last run for {ahu}:{now}")
             
             # zone temp and SAT monitoring
-            bad_zones = core_control.find_bad_zones(5)
+            bad_zones = core_control.find_bad_zones(5, 65, 78) #  zone_temp_dev, zone_temp_lo, zone_temp_hi
             if bad_zones:
                 bad_zones_comb = '\r\n'.join(bad_zones)
                 print('Find issues with zone temps or SATs')
