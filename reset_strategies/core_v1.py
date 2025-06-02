@@ -643,7 +643,7 @@ class CORE:
     ######
     ### zone temp montioring 
     ######
-    def find_bad_zones(self, temp_dev=5):
+    def find_bad_zones(self, temp_dev):
         # bad zones: (2 degrees wider than htg/clg setpoint) or (below 65 or above 78F)
         bad_zones = []     
         # loop through each zone vav box
