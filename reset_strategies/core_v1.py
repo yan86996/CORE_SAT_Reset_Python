@@ -380,15 +380,19 @@ class CORE:
                 print(e)
                 print(f'Cannot read AHU data for {self.ahu_name}')
                 sys.exit(1)
-                
+            
+            # humidity constrain
+            humd_SPmax = np.nan
+        
             if self.dehumid:
                 lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt = self.dehumd_limits
                 humd_SPmax = self.calc_sp_limit(self.cur_oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)
-                self.ts_data.append(humd_SPmax) # log
-                self.ts_header.append('dehumid max SAT') # log
                 
                 self.max_sat_sp = min(self.max_sat_sp, humd_SPmax)
                 self.reset.SPmax = self.max_sat_sp
+            
+            self.ts_data.append(humd_SPmax) # log
+            self.ts_header.append('humd_SPmax') # log
             
             self.ts_data.append(self.min_sat_sp) # log
             self.ts_header.append('min SAT') # log
@@ -643,7 +647,7 @@ class CORE:
     ######
     ### zone temp montioring 
     ######
-    def find_bad_zones(self, zone_temp_dev, zone_temp_lo, zone_temp_hi):
+    def find_bad_zones(self, zone_temp_dev, zone_temp_lo, zone_temp_hi, sat_lo, sat_hi):
         # bad zones: (2 degrees wider than htg/clg setpoint) or (below 65 or above 78F)
         bad_zones = []     
         # loop through each zone vav box
@@ -683,11 +687,11 @@ class CORE:
                 bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, below {zone_temp_lo}F or above {zone_temp_hi}F')             
                     
         # sat or sat setpoint not in 55-65F
-        if (self.cur_sat < 55) or (self.cur_sat > 65):
-            bad_zones.append(f'the SAT OF {self.ahu_name} at {now} is {self.cur_sat}, not within 55-65F')
+        if (self.cur_sat < sat_lo) or (self.cur_sat > sat_hi):
+            bad_zones.append(f'the SAT OF {self.ahu_name} at {now} is {self.cur_sat}, not within {sat_lo}-{sat_hi}F')
         
-        if (self.cur_satsp < 55) or (self.cur_satsp > 65):
-            bad_zones.append(f'the SAT setpoint OF {self.ahu_name} at {now} is {self.cur_sat}, not within 55-65F')
+        if (self.cur_satsp < sat_lo) or (self.cur_satsp > sat_hi):
+            bad_zones.append(f'the SAT setpoint OF {self.ahu_name} at {now} is {self.cur_sat}, not within {sat_lo}-{sat_hi}F')
             
         return bad_zones
     
@@ -868,7 +872,6 @@ class CORE:
             # update trend/hist values
             self.chw_coils_hist = 0
             self.estimations['chw_power_delta'] = diff_chw_power - curr_chw_power
-            print(self.ccv, diff_ahu_temp, curr_chw_power, self.estimations['chw_power_delta'])
             
         self.ts_header += [' chw power for lo SAT (BTU/h)', ' chw power for cur SAT (BTU/h)', ' chw power for hi SAT (BTU/h)', ] # log
         self.estimations['diff_sat'] = diff_sat
