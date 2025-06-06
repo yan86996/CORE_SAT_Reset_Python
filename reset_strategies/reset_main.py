@@ -22,7 +22,7 @@ if __name__=='__main__':
     from mapping_data import *
     from rand_dates import *
     
-    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test2'))
+    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test4'))
     core_version = 'v1'
     max_off_time = 1
     
@@ -39,7 +39,9 @@ if __name__=='__main__':
     sp_res_max = -1.0
     sat_min = 55
     sat_max = 65
-                
+    low_temp_cutoff = 65  # ignore requests from zone with a setpoint below low_temp_cutoff
+    high_temp_cutoff = 75 # ignore requests from zone with a setpoint above high_temp_cutoff
+    
     # pick algorithm
     if date.today() in rand_dates_Baseline:
         algo = 0 # baseline
@@ -62,15 +64,15 @@ if __name__=='__main__':
             clg_requests = zone_requests.Clg_Request(verbose=False, folder_dir=folder_dir, zone_dev_map=devID_zoneID, zone_names=zones,                                                 
                                                     flow='Airflow', flow_min='Minimum Airflow Setpoint', flow_max='Maximum Airflow Setpoint', 
                                                     clg_setpoint='Cooling Setpoint', htg_setpoint='Heating Setpoint', room_temp='Space Temperature', 
-                                                    low_temp_cutoff = 72.0, high_temp_cutoff = 75.0)
+                                                    low_temp_cutoff=low_temp_cutoff, high_temp_cutoff=high_temp_cutoff)
             
             htg_requests = zone_requests.Htg_Request(verbose=False, folder_dir=folder_dir, zone_dev_map=devID_zoneID, zone_names=zones, important=importance_htg_zones,                                                 
                                                     flow='Airflow', flow_min='Minimum Airflow Setpoint', flow_max='Maximum Airflow Setpoint', 
                                                     clg_setpoint='Cooling Setpoint', htg_setpoint='Heating Setpoint', room_temp='Space Temperature', 
-                                                    low_temp_cutoff = 72.0, high_temp_cutoff = 75.0)
-                                                            
-            # instantiate the reset object
-            temperature_reset = reset.Reset(SPmin=sat_min, SPmax=sat_max, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max)
+                                                    low_temp_cutoff=low_temp_cutoff, high_temp_cutoff=high_temp_cutoff)
+            
+            # instantiate the reset object for G36
+            temperature_reset_G36 = reset.Reset(SPmin=sat_min, SPmax=sat_max, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max)
             # G36 and CORE calculations will run whatever the date
             # but will only overwrite the csv depending on the algo sequence number
             
@@ -88,7 +90,7 @@ if __name__=='__main__':
             # dehumd requests
             dehumd_limits = (55, 60, 65, 58) # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
             dehumid = True
-            g36_control = G36(algo=algo, max_off_time=max_off_time, folder_dir=folder_dir, ahu_dev_map=devID_ahuID, zone_requests=clg_requests, reset=temperature_reset, num_ignore=num_ignore_clg, 
+            g36_control = G36(algo=algo, max_off_time=max_off_time, folder_dir=folder_dir, ahu_dev_map=devID_ahuID, zone_requests=clg_requests, reset=temperature_reset_G36, num_ignore=num_ignore_clg, 
                               ahu_name=ahu, SP0=sp_default, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max, lo_oat=lo_oat, hi_oat=hi_oat,
                               SPmin_at_lo_oat=sp_min_at_lo_oat, SPmax_at_lo_oat=sp_max_at_lo_oat, SPmin_at_hi_oat=sp_min_at_hi_oat, SPmax_at_hi_oat = sp_max_at_hi_oat,
                               )
@@ -98,11 +100,13 @@ if __name__=='__main__':
             ###
             ## CORE control
             ###
-            diff_sat = [-0.5, 0, 0.5]
-            
+            diff_sat = np.array([-0.5, 0, 0.5])
+            # instantiate the reset object for CORE
+            temperature_reset_CORE = reset.Reset(SPmin=sat_min, SPmax=sat_max, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max)
+   
             core_control = CORE(algo=algo, core_version=core_version, max_off_time=max_off_time, dehumid=dehumid, dehumd_limits=dehumd_limits, g36_sat=g36_sat, folder_dir=folder_dir, zone_names=zones, ahu_name=ahu,        
                                 zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID, pump_dev_map=devID_pumpID, ahu_dev_map=devID_ahuID,
-                                zone_requests=(clg_requests, htg_requests), reset=temperature_reset, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, diff_sat=diff_sat,                   
+                                zone_requests=(clg_requests, htg_requests), reset=temperature_reset_CORE, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, diff_sat=diff_sat,                   
                                 )                     
             
             core_control.get_new_satsp()
@@ -117,11 +121,11 @@ if __name__=='__main__':
                 file.write(f"last run for {ahu}:{now}")
             
             # zone temp and SAT monitoring
-            bad_zones = core_control.find_bad_zones(5, 65, 78) # zone_temp_dev, zone_temp_lo, zone_temp_hi
+            bad_zones = core_control.find_bad_zones(5, 65, 78, 60, 78) #  zone_temp_dev, zone_temp_lo, zone_temp_hi, lo_SAT, hi_SAT
             if bad_zones:
                 bad_zones_comb = '\r\n'.join(bad_zones)
                 print('Find issues with zone temps or SATs')
-                send_email(email_list, bad_zones_comb, '[Abnormal zone temp or SAT warnings]')
+                # send_email(email_list, bad_zones_comb, '[Abnormal zone temp or SAT warnings]')
                 
         except Exception as e:
             print(e)
