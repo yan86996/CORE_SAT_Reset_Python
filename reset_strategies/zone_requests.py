@@ -55,9 +55,8 @@ class Requests:
           if z in self.zd:
             self.zd[z]['importance'] = self.important[z]
         
-    def calcTotalRequests(self):
+    def calc_Clg_TotalRequests(self):
         # Sum up the total number of requests (and also weighted by importance)
-        
         for z in self.zd:  
             if 'clg_requests' in self.zd[z]:
                 self.rR_clg += self.zd[z]['clg_requests']
@@ -73,18 +72,8 @@ class Requests:
                       'partial_zones': self.missingPartial,
                      }
             
-            if 'htg_requests' in self.zd[z]:
-                self.rR_htg += self.zd[z]['htg_requests']
-                                
-                if 'importance' in self.zd[z]:
-                    self.R_htg += self.zd[z]['htg_requests'] * float(self.zd[z]['importance'])
-                else:
-                    self.R_htg += self.zd[z]['htg_requests']
-                                        
         rv = {'raw_clg_requests': self.rR_clg, 
              'weighted_clg_requests': self.R_clg,
-             'raw_htg_requests': self.rR_htg, 
-             'weighted_htg_requests': self.R_htg,
              'ignored_zones': self.ignore_zones, 
              'partial_zones': self.missingPartial,
              }
@@ -93,6 +82,36 @@ class Requests:
             print('\n================= Requests summary ================ ')
             print('Total raw cooling requests: ' + str(self.rR_clg))
             print('Total importance-weighted cooling requests: ' + str(self.R_clg))
+            if len(self.ignore_zones):
+                print('Ignored zones (user selected): ')
+            if len(self.missingEssential):   
+                print('Ignored zones (due to missing essential data): ')
+            if len(self.missingPartial):  
+                print('Partial request results only (due to missing data, or a failed point): ')
+      
+        return rv
+    
+    def calc_Htg_TotalRequests(self):
+        # Sum up the total number of requests (and also weighted by importance)
+        for z in self.zd:  
+            if 'htg_requests' in self.zd[z]:
+                self.rR_htg += self.zd[z]['htg_requests']
+                                
+                if 'importance' in self.zd[z]:
+                    self.R_htg += self.zd[z]['htg_requests'] * float(self.zd[z]['importance'])
+                else:
+                    self.R_htg += self.zd[z]['htg_requests']
+                                        
+        rv = {
+             'raw_htg_requests': self.rR_htg, 
+             'weighted_htg_requests': self.R_htg,
+             'ignored_zones': self.ignore_zones, 
+             'partial_zones': self.missingPartial,
+             }
+        
+        if self.verbose:
+            print('\n================= Requests summary ================ ')
+            
             print('Total raw heating requests: ' + str(self.rR_htg))
             print('Total importance-weighted cooling requests: ' + str(self.R_htg))
             if len(self.ignore_zones):
@@ -103,87 +122,6 @@ class Requests:
                 print('Partial request results only (due to missing data, or a failed point): ')
       
         return rv
-
-class Pressure(Requests):
-    """ This class calculates the number of requests
-    for a duct static pressure reset strategy according
-    to the Tailor Engineering Sequence of Operations.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(Pressure, self).__init__(*args, **kwargs)
-    
-    def update(self):
-        self.missingPartial = []
-        self.missingEssential = []
-    
-        # clear existing zone data from previous update
-        for z in self.zd:
-          if 'damper' in self.zd[z]:
-            del self.zd[z]['damper']
-          if 'flow' in self.zd[z]:
-            del self.zd[z]['flow']
-          if 'flow_max' in self.zd[z]:
-            del self.zd[z]['flow_max']      
-      
-        for zone_name in self.zone_names:
-            self.zd[zone_name] = {}
-            
-            # from AV_XXXX.csv
-            div_ID = self.zone_dev_map[zone_name]
-            zone_csv_AV = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
-            zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
-            
-            # min airflow
-            min_flow = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_min) >= 0][0]
-            self.zd[zone_name]['min_flow'] = min_flow
-            # max airflow
-            max_flow = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], self.flow_max) >= 0][0]
-            self.zd[zone_name]['max_flow'] = max_flow  
-            
-            # from AI_XXXX.csv
-            zone_csv_AI = os.path.join(self.folder_dir, f'AI_{div_ID}.csv')
-            zone_data_AI = np.genfromtxt(zone_csv_AI, delimiter=',', dtype=None, names=True, encoding='utf-8') 
-            
-            # airflow
-            airflow = zone_data_AI['Present_Value'][np.char.find(zone_data_AI['Object_Name'], self.flow) >= 0][0]
-            self.zd[zone_name]['flow'] = airflow
-      
-        print('\n======= for pressure requests =======\n' )
-    
-      # calculate requests
-        for z in sorted(self.zd):
-            if 'damper' in self.zd[z]:
-                if self.zd[z]['damper'] < 95:
-                    self.zd[z]['requests'] = 0
-                if self.zd[z]['damper'] >= 95:
-                    self.zd[z]['requests'] = 1
-                    if 'flow' in self.zd[z] and 'flow_max' in self.zd[z]:
-                        if self.zd[z]['flow'] <= self.zd[z]['flow_max']*0.7:
-                            self.zd[z]['requests'] = 2    
-                        if self.zd[z]['flow'] <= self.zd[z]['flow_max']*0.5:
-                            self.zd[z]['requests'] = 3
-                        if self.zd[z]['flow'] <= self.zd[z]['flow_max']*0.25 and self.fdd:
-                            self.zd[z]['requests'] = 0
-                            self.missingPartial.append(z)
-                    else:
-                        self.missingPartial.append(z)
-            else:
-                self.missingEssential.append(z)
-      
-            self.handleAtypicalZones()
-      
-        if self.verbose:
-          self.displayDetails()
-        
-        return self.calcTotalRequests()
-    
-    def displayDetails(self):
-        # Print the results for each zone if requested
-        print('\n================= Details for zones with almost fully open dampers ================ ')
-        for z in sorted(self.zd):
-            if self.zd[z]['damper'] >= 95:
-                print(str(z))
 
 class Clg_Request(Requests):
     def __init__(self, *args, **kwargs):
@@ -251,11 +189,12 @@ class Clg_Request(Requests):
             if 'cooling_loop' in self.zd[z]:
                 if self.zd[z]['room_temp'] > self.zd[z]['clg_setpoint']:
                     self.c_clg += 1   
+                    
                 if self.zd[z]['cooling_loop'] < .95:
                     self.zd[z]['clg_requests'] = 0
+                    
                 if self.zd[z]['cooling_loop'] >= .95:
-                    self.zd[z]['clg_requests'] = 1
-                  
+                    self.zd[z]['clg_requests'] = 1               
                     if self.zd[z]['room_temp'] >= self.zd[z]['clg_setpoint'] + 3.0:
                         self.zd[z]['clg_requests'] = 2    
                     if self.zd[z]['room_temp'] >= self.zd[z]['clg_setpoint'] + 5.0:
@@ -275,7 +214,7 @@ class Clg_Request(Requests):
         if self.verbose:
             self.displayDetails()
       
-        rv = self.calcTotalRequests()
+        rv = self.calc_Clg_TotalRequests()
         rv['cooling_zones'] = self.c_clg
         
         return rv
@@ -366,7 +305,7 @@ class Htg_Request(Requests):
         if self.verbose:
             self.displayDetails()
       
-        rv = self.calcTotalRequests()
+        rv = self.calc_Htg_TotalRequests()
         rv['heating_zones'] = self.c_htg
         
         return rv
