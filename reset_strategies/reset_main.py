@@ -165,11 +165,23 @@ if __name__=='__main__':
             filtered_data = np.vstack([header] + filtered_rows)        
             filtered_data[len(add_data):, 2] = np.arange(10001, 10001 + len(filtered_data) - len(add_data))
             filtered_data[:, -1] = ''
+                        
+            header = filtered_data[0]
+            rows = filtered_data[1:]
+            mask = np.array([any('satsp' in cell for cell in row) for row in rows])
             
-            # Save to a new CSV file
-            output_path =  os.path.join(folder_dir, 'AV_3050090_out.csv')
-            np.savetxt(output_path, filtered_data, delimiter=",", fmt="%s")
-        
+            # split rows
+            matched = rows[mask]
+            remaining = rows[~mask]
+            
+            # save satsp to csv1 
+            output_path1 = os.path.join(folder_dir, 'AV_3050090_out1.csv')
+            np.savetxt(output_path1, np.vstack([header, matched]), delimiter=",", fmt="%s")
+            
+            # save others to csv2
+            output_path2 = os.path.join(folder_dir, 'AV_3050090_out2.csv')
+            np.savetxt(output_path2, np.vstack([header, remaining]), delimiter=",", fmt="%s")
+            
         else:
             print("No matching rows found")
         
