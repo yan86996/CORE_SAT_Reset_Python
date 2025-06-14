@@ -22,16 +22,20 @@ if __name__=='__main__':
     from mapping_data import *
     from rand_dates import *
     
-    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test4'))
+    folder_dir = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test2'))
     core_version = 'v1'
     max_off_time = 1
     
     # trim and respond logic params
     # AHU5:26 zones, AHU6:44 zones, AHU7: 58 zones
     # ignored cooling requests
-    num_ignore_clg_ahu5, num_ignore_clg_ahu6, num_ignore_clg_ahu7 = 26*3/10, 41*3/10, 58*3/10
+    ignore_clg_reqts_pct = 0.1
+    n_vavs_ahu5, n_vavs_ahu6, n_vavs_ahu7 = len(zones_5), len(zones_6), len(zones_7),
+    num_ignore_clg_ahu5, num_ignore_clg_ahu6, num_ignore_clg_ahu7 = n_vavs_ahu5*3*ignore_clg_reqts_pct, n_vavs_ahu6*3*ignore_clg_reqts_pct, n_vavs_ahu7*3*ignore_clg_reqts_pct
     # ignored heating requests
-    num_ignore_htg_ahu5, num_ignore_htg_ahu6, num_ignore_htg_ahu7 = 26*3/10, 41*3/10, 58*3/10
+    ignore_htg_reqts_pct = 0.1
+    n_CLGvavs_ahu5, n_CLGvavs_ahu6, n_CLGvavs_ahu7 = sum("CLG" in item for item in zones_5), sum("CLG" in item for item in zones_6), sum("CLG" in item for item in zones_7)
+    num_ignore_htg_ahu5, num_ignore_htg_ahu6, num_ignore_htg_ahu7 = (n_vavs_ahu5*3 + n_CLGvavs_ahu5*3)*ignore_htg_reqts_pct, (n_vavs_ahu6*3 + n_CLGvavs_ahu6*3)*ignore_htg_reqts_pct, (n_vavs_ahu7*3 + n_CLGvavs_ahu7*3)*ignore_htg_reqts_pct
     
     sp_default = 58 # default setpoint if control algo doesn't work
     sp_trim = 0.2
@@ -88,14 +92,12 @@ if __name__=='__main__':
             hi_oat = 70
             
             # dehumd requests
-            dehumd_limits = (55, 60, 65, 58) # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
-            dehumid = True
             g36_control = G36(algo=algo, max_off_time=max_off_time, folder_dir=folder_dir, ahu_dev_map=devID_ahuID, zone_requests=clg_requests, reset=temperature_reset_G36, num_ignore=num_ignore_clg, 
                               ahu_name=ahu, SP0=sp_default, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max, lo_oat=lo_oat, hi_oat=hi_oat,
                               SPmin_at_lo_oat=sp_min_at_lo_oat, SPmax_at_lo_oat=sp_max_at_lo_oat, SPmin_at_hi_oat=sp_min_at_hi_oat, SPmax_at_hi_oat = sp_max_at_hi_oat,
                               )
                               
-            g36_sat = g36_control.get_new_satsp_humd(55, 60, 65, 58)
+            g36_sat = g36_control.get_new_satsp_humd(55, 60, 65, 60) # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
             
             ###
             ## CORE control
@@ -103,8 +105,10 @@ if __name__=='__main__':
             diff_sat = np.array([-0.5, 0, 0.5])
             # instantiate the reset object for CORE
             temperature_reset_CORE = reset.Reset(SPmin=sat_min, SPmax=sat_max, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max)
-   
-            core_control = CORE(algo=algo, core_version=core_version, max_off_time=max_off_time, dehumid=dehumid, dehumd_limits=dehumd_limits, g36_sat=g36_sat, folder_dir=folder_dir, zone_names=zones, ahu_name=ahu,        
+            
+            dehumd_limits = (55, 60, 65, 60) # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
+
+            core_control = CORE(algo=algo, core_version=core_version, max_off_time=max_off_time, dehumid=True, dehumd_limits=dehumd_limits, g36_sat=g36_sat, folder_dir=folder_dir, zone_names=zones, ahu_name=ahu,        
                                 zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID, pump_dev_map=devID_pumpID, ahu_dev_map=devID_ahuID,
                                 zone_requests=(clg_requests, htg_requests), reset=temperature_reset_CORE, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, diff_sat=diff_sat,                   
                                 )                     
@@ -181,7 +185,7 @@ if __name__=='__main__':
             # save others to csv2
             output_path2 = os.path.join(folder_dir, 'AV_3050090_out2.csv')
             np.savetxt(output_path2, np.vstack([header, remaining]), delimiter=",", fmt="%s")
-            
+        
         else:
             print("No matching rows found")
         
