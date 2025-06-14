@@ -144,11 +144,14 @@ class G36:
             oa_dpwt = self.cal_dew_point_temperature(self.current_oat, self.current_oarh)
             humd_SPmax = self.calc_sp_limit(oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)              
             
-            self.reset.SPmax = min(reset_SPmax, humd_SPmax)
+            # if dehumidification requires a step-change of over 0.5F
+            humd_SPmax_adjust = max(self.cur_satsp - 0.5, humd_SPmax)
+            
+            self.reset.SPmax = min(reset_SPmax, humd_SPmax_adjust)
             
             # use trim and respond without outside air based SAT setpoint limits
             new_sp = self.reset.get_new_sp_clg(self.clg_requests.R_clg , self.cur_sat)
-          
+
         except Exception as e:
             print(e)            
             try: 
