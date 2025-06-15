@@ -145,7 +145,7 @@ class G36:
             humd_SPmax = self.calc_sp_limit(oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)              
             
             # if dehumidification requires a step-change of over 0.5F
-            humd_SPmax_adjust = max(self.cur_satsp - 0.5, humd_SPmax)
+            humd_SPmax_adjust = max(self.cur_sat - 0.5, humd_SPmax)
             
             self.reset.SPmax = min(reset_SPmax, humd_SPmax_adjust)
             
