@@ -381,19 +381,6 @@ class CORE:
                 print(f'Cannot read AHU data for {self.ahu_name}')
                 sys.exit(1)
             
-            # humidity constrain
-            humd_SPmax = np.nan
-        
-            if self.dehumid:
-                lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt = self.dehumd_limits
-                humd_SPmax = self.calc_sp_limit(self.cur_oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)
-                
-                self.max_sat_sp = min(self.max_sat_sp, humd_SPmax)
-                self.reset.SPmax = self.max_sat_sp
-            
-            self.ts_data.append(humd_SPmax) # log
-            self.ts_header.append('humd_SPmax') # log
-            
             self.ts_data.append(self.min_sat_sp) # log
             self.ts_header.append('min SAT') # log
             self.ts_data.append(self.reset.SPmax) # log
@@ -460,59 +447,99 @@ class CORE:
             self.read_hist_vars_csvs()
                 
             #  initialize cost estimates
+            self.estimations['chw_cost_delta_G36'] = np.full(3, np.nan)
+            self.estimations['rhv_cost_delta_G36'] = np.full(3, np.nan)
+            self.estimations['fan_cost_delta_G36'] = np.full(3, np.nan)
+            self.estimations['tot_cost_delta_G36'] = np.full(3, np.nan)
+            self.estimations['diff_zone_tot_afr_G36'] = np.full(3, np.nan)
+            
             self.estimations['chw_cost_delta'] = np.full(3, np.nan)
             self.estimations['rhv_cost_delta'] = np.full(3, np.nan)
             self.estimations['fan_cost_delta'] = np.full(3, np.nan)
             self.estimations['tot_cost_delta'] = np.full(3, np.nan)
             self.estimations['diff_zone_tot_afr'] = np.full(3, np.nan)
             
-            # calculate the feasible range of diff_sat
-            candidate_sat = self.diff_sat + self.cur_satsp
-            # sat setpoint range check
-            candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
-            candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)
-            diff_sat = candidate_sat - self.cur_satsp
+            # util rate
+            elec_pr = electricity_price(datetime.now())              
+            steam_pr = steam_price(datetime.now()) 
             
+            # humidity constrain
+            humd_SPmax = np.nan
+                
             # run CORE calculations
             try:
-                # estimate power consumption values under different setpoints for G36
-                self.estimate_power_G36(self.g36_sat, diff_sat)
-                
                 # estimate power consumption values under different setpoints for CORE
-                self.estimate_power(self.cur_satsp, diff_sat)         
+                # calculate the feasible range of diff_sat
+                candidate_sat = self.diff_sat + self.cur_satsp
+                # sat setpoint range check
+                candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
+                candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)
+                diff_sat = candidate_sat - self.cur_satsp
                 
-                # util rate
-                elec_pr = electricity_price(datetime.now())              
-                steam_pr = steam_price(datetime.now()) 
-                
+                self.estimate_power(self.cur_satsp, diff_sat)
                 self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
                 self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
                 self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
-                self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']
+                self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']                    
 
-                # cooling request
-                if self.clg_requests.R_clg > self.num_ignore_clg:
-                    # use trim and respond without outside air based SAT setpoint limits
-                    new_core_sat = self.reset.get_new_sp_clg(self.clg_requests.R_clg, self.cur_satsp)
-                    core_finish = 3
-                    print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for cooling requests ######')
-                    
                 # heating request
-                elif self.htg_requests.R_htg > self.num_ignore_htg:
+                if self.htg_requests.R_htg > self.num_ignore_htg:                 
                     # use trim and respond without outside air based SAT setpoint limits
                     new_core_sat = self.reset.get_new_sp_htg(self.htg_requests.R_htg, self.cur_satsp)
                     core_finish = 2
                     print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for heating requests ######')
-    
-                # no comfort present
-                # run CORE algorithm
-                else:
-                    print(f'###### No comofort request, CORE runs for {self.ahu_name} ######')                                      
-                    idx_opt = np.argmin(self.estimations['tot_cost_delta'])                   
-                    new_core_sat = self.cur_satsp + diff_sat[idx_opt]
                     
-                    core_finish = 1
+                else:
+                    if self.dehumid:
+                        lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt = self.dehumd_limits
+                        humd_SPmax = self.calc_sp_limit(self.cur_oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)
+                        
+                        # if dehumidification requires a step-change of over 0.5F
+                        humd_SPmax_adjust = max(self.cur_satsp - 0.5, humd_SPmax)
+                            
+                        self.max_sat_sp = min(self.max_sat_sp, humd_SPmax_adjust)
+                        self.reset.SPmax = self.max_sat_sp
+                    
+                        # sat setpoint range check considering dehumidificaiton
+                        candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
+                        diff_sat = candidate_sat - self.cur_satsp
+                    
+                        # estimate power consumption values under different setpoints for CORE
+                        self.estimate_power(self.cur_satsp, diff_sat)
+                        self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
+                        self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
+                        self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
+                        self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']                    
+
+                    # cooling request
+                    if self.clg_requests.R_clg > self.num_ignore_clg:
+                        # use trim and respond without outside air based SAT setpoint limits
+                        new_core_sat = self.reset.get_new_sp_clg(self.clg_requests.R_clg, self.cur_satsp)
+                        core_finish = 3
+                        print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for cooling requests ######')
+                        
+                    # no comfort present
+                    # run CORE algorithm
+                    else:
+                        print(f'###### No comofort request, CORE runs for {self.ahu_name} ######')                                      
+                        idx_opt = np.argmin(self.estimations['tot_cost_delta'])                   
+                        new_core_sat = self.cur_satsp + diff_sat[idx_opt]
+                        
+                        core_finish = 1
+                                    
+                self.ts_data.append(humd_SPmax) # log
+                self.ts_header.append('humd_SPmax') # log
                 
+                # calculate the feasible range of diff_sat for G36
+                candidate_sat_g36 = self.diff_sat + self.g36_sat
+                # if dehumidification requires a step-change of over 0.5F
+                humd_SPmax_adjust_g36 = min(65, max(self.g36_sat - 0.5, humd_SPmax))
+                # sat setpoint range check
+                candidate_sat_g36 = np.where(candidate_sat_g36 > humd_SPmax_adjust_g36, humd_SPmax_adjust_g36, candidate_sat_g36)
+                candidate_sat_g36 = np.where(candidate_sat_g36 < 55, 55, candidate_sat_g36)
+                diff_sat_g36 = candidate_sat_g36 - self.g36_sat
+                # estimate power consumption values under different setpoints for G36
+                self.estimate_power_G36(self.g36_sat, diff_sat_g36)
                 # update cost estimation for G36 but NOT used for SAT selection
                 self.estimations['chw_cost_delta_G36'] = self.estimations['chw_power_delta_G36']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
                 self.estimations['rhv_cost_delta_G36'] = self.estimations['rhv_power_delta_G36']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
