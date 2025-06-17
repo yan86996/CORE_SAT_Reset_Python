@@ -179,11 +179,13 @@ if __name__=='__main__':
             remaining = rows[~mask]
             
             # save satsp to csv1 
-            output_path1 = os.path.join(folder_dir, 'AV_3050090_out1.csv')
+            folder_dir2 = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test1'))
+
+            output_path1 = os.path.join(folder_dir2, 'AV_3050090_out1.csv')
             np.savetxt(output_path1, np.vstack([header, matched]), delimiter=",", fmt="%s")
             
             # save others to csv2
-            output_path2 = os.path.join(folder_dir, 'AV_3050090_out2.csv')
+            output_path2 = os.path.join(folder_dir2, 'AV_3050090_out2.csv')
             np.savetxt(output_path2, np.vstack([header, remaining]), delimiter=",", fmt="%s")
         
         else:
