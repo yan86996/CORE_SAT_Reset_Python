@@ -4,7 +4,7 @@ zones_6 = ['G-26', 'G-27', 'G-28', 'G-29', 'G-30', 'G-31', 'G-32', 'G-33', 'G-34
 zones_7 = ['G-2', 'G-8', 'G-9', 'G-10', 'G-11', 'G-12', 'G-13', 'G-14', 'G-15', 'G-16', 'G-17', 'G-18', 'G-19', 'G-20', 'G-21', 'G-23', 'G-24', 'G-35', 'G-36', '1-1', '1-2', '1-13(CLG)', '1-14', '1-15(CLG)', '1-16(CLG)', '1-17(CLG)', '2-1(CLG)', '2-2', '2-3', '2-9', '2-10(CLG)', '2-11', '2-12(CLG)', '2-13(CLG)', '2-14(CLG)', '2-15(CLG)', '2-2A', '3-1', '3-2(CLG)', '3-8', '3-9(CLG)', '3-10', '3-11(CLG)', '3-12(CLG)', '3-13(CLG)', '3-14(CLG)', '3-15', '3-26', '3-27', '4-1', '4-2', '4-3', '4-4', '4-5', '4-6', '4-8', '4-9', '4-18']
 
 # weight factor of 0.5 for heating requests for cooling-only VAVs
-importance_htg_zones = {zone: 0.5 for zone in zones_5 + zones_6 + zones_7 if '(CLG)' in zone}
+importance_htg_zones = {zone: 2 for zone in zones_5 + zones_6 + zones_7 if '(CLG)' in zone}
 
 # device ID to zone mapping
 devID_zoneID = {
