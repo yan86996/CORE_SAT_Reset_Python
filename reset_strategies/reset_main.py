@@ -61,16 +61,11 @@ if __name__=='__main__':
     
     # alert emails
     email_list = ['TJayarathne@trccompanies.com', 'yan.wang@berkeley.edu', 'jbursill@deltacontrols.com']
-        
+    
     for zones, ahu, num_ignore_clg, num_ignore_htg in zones_and_ahus:    
         try:
             # instantiate temp requests objects
-            clg_requests = zone_requests.Clg_Request(verbose=False, folder_dir=folder_dir, zone_dev_map=devID_zoneID, zone_names=zones,                                                 
-                                                    flow='Airflow', flow_min='Minimum Airflow Setpoint', flow_max='Maximum Airflow Setpoint', 
-                                                    clg_setpoint='Cooling Setpoint', htg_setpoint='Heating Setpoint', room_temp='Space Temperature', 
-                                                    low_temp_cutoff=low_temp_cutoff, high_temp_cutoff=high_temp_cutoff)
-            
-            htg_requests = zone_requests.Htg_Request(verbose=False, folder_dir=folder_dir, zone_dev_map=devID_zoneID, zone_names=zones, important=importance_htg_zones,                                                 
+            clg_requests_G36 = zone_requests.Clg_Request(verbose=False, folder_dir=folder_dir, zone_dev_map=devID_zoneID, zone_names=zones, important_clg=[],  important_htg=[],                                        
                                                     flow='Airflow', flow_min='Minimum Airflow Setpoint', flow_max='Maximum Airflow Setpoint', 
                                                     clg_setpoint='Cooling Setpoint', htg_setpoint='Heating Setpoint', room_temp='Space Temperature', 
                                                     low_temp_cutoff=low_temp_cutoff, high_temp_cutoff=high_temp_cutoff)
@@ -88,11 +83,11 @@ if __name__=='__main__':
             sp_max_at_lo_oat = 65
             sp_min_at_hi_oat = 55
             sp_max_at_hi_oat = 55
-            lo_oat = 60
-            hi_oat = 70
+            lo_oat = 50
+            hi_oat = 80
             
             # dehumd requests
-            g36_control = G36(algo=algo, max_off_time=max_off_time, folder_dir=folder_dir, ahu_dev_map=devID_ahuID, zone_requests=clg_requests, reset=temperature_reset_G36, num_ignore=num_ignore_clg, 
+            g36_control = G36(algo=algo, max_off_time=max_off_time, folder_dir=folder_dir, ahu_dev_map=devID_ahuID, zone_requests=clg_requests_G36, reset=temperature_reset_G36, num_ignore=num_ignore_clg, 
                               ahu_name=ahu, SP0=sp_default, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max, lo_oat=lo_oat, hi_oat=hi_oat,
                               SPmin_at_lo_oat=sp_min_at_lo_oat, SPmax_at_lo_oat=sp_max_at_lo_oat, SPmin_at_hi_oat=sp_min_at_hi_oat, SPmax_at_hi_oat = sp_max_at_hi_oat,
                               )
@@ -104,13 +99,23 @@ if __name__=='__main__':
             ###
             diff_sat = np.array([-0.5, 0, 0.5])
             # instantiate the reset object for CORE
+            clg_requests_CORE = zone_requests.Clg_Request(verbose=False, folder_dir=folder_dir, zone_dev_map=devID_zoneID, zone_names=zones, important_clg=[],  important_htg=[],                                        
+                                                    flow='Airflow', flow_min='Minimum Airflow Setpoint', flow_max='Maximum Airflow Setpoint', 
+                                                    clg_setpoint='Cooling Setpoint', htg_setpoint='Heating Setpoint', room_temp='Space Temperature', 
+                                                    low_temp_cutoff=low_temp_cutoff, high_temp_cutoff=high_temp_cutoff)
+            
+            htg_requests_CORE = zone_requests.Htg_Request(verbose=False, folder_dir=folder_dir, zone_dev_map=devID_zoneID, zone_names=zones, important_clg=[], important_htg=importance_htg_zones,                                                 
+                                                    flow='Airflow', flow_min='Minimum Airflow Setpoint', flow_max='Maximum Airflow Setpoint', 
+                                                    clg_setpoint='Cooling Setpoint', htg_setpoint='Heating Setpoint', room_temp='Space Temperature', 
+                                                    low_temp_cutoff=low_temp_cutoff, high_temp_cutoff=high_temp_cutoff)
+            
             temperature_reset_CORE = reset.Reset(SPmin=sat_min, SPmax=sat_max, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max)
             
             dehumd_limits = (55, 60, 65, 60) # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
-
+            
             core_control = CORE(algo=algo, core_version=core_version, max_off_time=max_off_time, dehumid=True, dehumd_limits=dehumd_limits, g36_sat=g36_sat, folder_dir=folder_dir, zone_names=zones, ahu_name=ahu,        
                                 zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID, pump_dev_map=devID_pumpID, ahu_dev_map=devID_ahuID,
-                                zone_requests=(clg_requests, htg_requests), reset=temperature_reset_CORE, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, diff_sat=diff_sat,                   
+                                zone_requests=(clg_requests_CORE, htg_requests_CORE), reset=temperature_reset_CORE, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, diff_sat=diff_sat,                   
                                 )                     
             
             core_control.get_new_satsp()
@@ -178,7 +183,7 @@ if __name__=='__main__':
             matched = rows[mask]
             remaining = rows[~mask]
             
-            # save satsp to csv1 
+            # save satsp to csv1
             folder_dir2 = os.path.abspath(os.path.join(script_dir, "..", 'bacnet_csvs_test1'))
 
             output_path1 = os.path.join(folder_dir2, 'AV_3050090_out1.csv')
