@@ -23,7 +23,8 @@ class CORE:
         self.vdf_dev_map = vdf_dev_map
         self.pump_dev_map = pump_dev_map
         self.max_off_time = max_off_time
-        
+        # hw pump power
+        self.hw_pumps_power = []
         # sat changes
         self.diff_sat = np.asarray(diff_sat)
         
@@ -331,7 +332,10 @@ class CORE:
             
             self.ts_data.append(pump_power) # log 
             self.ts_header.append(key + ' power(kW)') # log
-    
+                
+            if key in ['HWP_1_POWER', 'HWP_2_POWER']:
+                self.hw_pumps_power.append(pump_power)
+            
     def get_last_good_SAT(self):
         folder_path = os.path.join(self.folder_dir, 'log', self.ahu_name)
         csv_files = glob.glob(os.path.join(folder_path, '*.csv'))
@@ -521,6 +525,10 @@ class CORE:
                     # no comfort present
                     # run CORE algorithm
                     else:
+                        if not any(x > 0 for x in self.hw_pumps_power):
+                            print('###### NO HOT WATER SUPPLY. REMOVE REHEAT ENERGY COST ESTIMATES ######')
+                            self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['fan_cost_delta']                    
+                            
                         print(f'###### No comofort request, CORE runs for {self.ahu_name} ######')                                      
                         idx_opt = np.argmin(self.estimations['tot_cost_delta'])                   
                         new_core_sat = self.cur_satsp + diff_sat[idx_opt]
