@@ -333,7 +333,7 @@ class CORE:
             self.ts_data.append(pump_power) # log 
             self.ts_header.append(key + ' power(kW)') # log
                 
-            if key in ['HWP_1_POWER', 'HWP_2_POWER']:
+            if value in ['HWP_1_POWER', 'HWP_2_POWER']:
                 self.hw_pumps_power.append(pump_power)
             
     def get_last_good_SAT(self):
