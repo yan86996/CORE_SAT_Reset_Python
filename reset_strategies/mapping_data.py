@@ -21,7 +21,7 @@ devID_ahuID = {
 # device ID to VFD mapping
 devID_vfdID = {
                'AHU_5': {'SF1':'AHU5_SF_VFD',                        'RF1':'AHU5_RF_VFD'}, # use SF as RF for AHU 5
-               'AHU_6': {'SF1':'AHU6_RF1_VFD', 'SF2':'AHU6_RF2_VFD', 'RF1':'AHU6_RF1_VFD', 'RF2':'AHU6_RF2_VFD'}, # use RF as SF for AHU 6
+               'AHU_6': {'SF1':'AHU6_SF1_VFD', 'SF2':'AHU6_SF2_VFD', 'RF1':'AHU6_RF1_VFD', 'RF2':'AHU6_RF2_VFD'}, # use RF as SF for AHU 6
                'AHU_7': {'SF1':'AHU7_SF1_VFD', 'SF2':'AHU7_SF2_VFD', 'RF1':'AHU7_RF1_VFD', 'RF2':'AHU7_RF2_VFD'}
               }
 
