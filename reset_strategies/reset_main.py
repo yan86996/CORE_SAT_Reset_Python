@@ -35,7 +35,8 @@ if __name__=='__main__':
     # ignored heating requests
     ignore_htg_reqts_pct = 0.1
     n_CLGvavs_ahu5, n_CLGvavs_ahu6, n_CLGvavs_ahu7 = sum("CLG" in item for item in zones_5), sum("CLG" in item for item in zones_6), sum("CLG" in item for item in zones_7)
-    num_ignore_htg_ahu5, num_ignore_htg_ahu6, num_ignore_htg_ahu7 = (n_vavs_ahu5*3 + n_CLGvavs_ahu5*3)*ignore_htg_reqts_pct, (n_vavs_ahu6*3 + n_CLGvavs_ahu6*3)*ignore_htg_reqts_pct, (n_vavs_ahu7*3 + n_CLGvavs_ahu7*3)*ignore_htg_reqts_pct
+    important_CLG = 1
+    num_ignore_htg_ahu5, num_ignore_htg_ahu6, num_ignore_htg_ahu7 = (n_vavs_ahu5*3 + n_CLGvavs_ahu5*(important_CLG -1)*3)*ignore_htg_reqts_pct, (n_vavs_ahu6*3 + n_CLGvavs_ahu6*(important_CLG -1)*3)*ignore_htg_reqts_pct, (n_vavs_ahu7*3 + n_CLGvavs_ahu7*(important_CLG -1)*3)*ignore_htg_reqts_pct
     
     sp_default = 58 # default setpoint if control algo doesn't work
     sp_trim = 0.2
@@ -61,6 +62,7 @@ if __name__=='__main__':
     
     # alert emails
     email_list = ['TJayarathne@trccompanies.com', 'yan.wang@berkeley.edu', 'jbursill@deltacontrols.com']
+    email_list = []
     
     for zones, ahu, num_ignore_clg, num_ignore_htg in zones_and_ahus:    
         try:
