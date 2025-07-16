@@ -29,14 +29,16 @@ if __name__=='__main__':
     # trim and respond logic params
     # AHU5:26 zones, AHU6:44 zones, AHU7: 58 zones
     # ignored cooling requests
-    ignore_clg_reqts_pct = 0.1
+    ignore_clg_reqts = 0.1
     n_vavs_ahu5, n_vavs_ahu6, n_vavs_ahu7 = len(zones_5), len(zones_6), len(zones_7),
-    num_ignore_clg_ahu5, num_ignore_clg_ahu6, num_ignore_clg_ahu7 = n_vavs_ahu5*3*ignore_clg_reqts_pct, n_vavs_ahu6*3*ignore_clg_reqts_pct, n_vavs_ahu7*3*ignore_clg_reqts_pct
+    num_ignore_clg_ahu5, num_ignore_clg_ahu6, num_ignore_clg_ahu7 = round(n_vavs_ahu5*3*ignore_clg_reqts), round(n_vavs_ahu6*3*ignore_clg_reqts), round(n_vavs_ahu7*3*ignore_clg_reqts)
     # ignored heating requests
-    ignore_htg_reqts_pct = 0.1
+    ignore_htg_reqts = 0.1
     n_CLGvavs_ahu5, n_CLGvavs_ahu6, n_CLGvavs_ahu7 = sum("CLG" in item for item in zones_5), sum("CLG" in item for item in zones_6), sum("CLG" in item for item in zones_7)
     important_CLG = 1
-    num_ignore_htg_ahu5, num_ignore_htg_ahu6, num_ignore_htg_ahu7 = (n_vavs_ahu5*3 + n_CLGvavs_ahu5*(important_CLG -1)*3)*ignore_htg_reqts_pct, (n_vavs_ahu6*3 + n_CLGvavs_ahu6*(important_CLG -1)*3)*ignore_htg_reqts_pct, (n_vavs_ahu7*3 + n_CLGvavs_ahu7*(important_CLG -1)*3)*ignore_htg_reqts_pct
+    num_ignore_htg_ahu5 = round((n_vavs_ahu5*3 + n_CLGvavs_ahu5*(important_CLG -1)*3)*ignore_htg_reqts)
+    num_ignore_htg_ahu6 = round((n_vavs_ahu6*3 + n_CLGvavs_ahu6*(important_CLG -1)*3)*ignore_htg_reqts)
+    num_ignore_htg_ahu7 = round((n_vavs_ahu7*3 + n_CLGvavs_ahu7*(important_CLG -1)*3)*ignore_htg_reqts)
     
     sp_default = 58 # default setpoint if control algo doesn't work
     sp_trim = 0.2
