@@ -453,7 +453,7 @@ class CORE:
                 
                 self.estimate_power(self.cur_satsp, diff_sat)
                 self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
-                self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
+                self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
                 self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
                 self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']                    
 
