@@ -276,26 +276,7 @@ class CORE:
                 self.ts_data.append(self.estimations['clg_coil_clo_temp_chg_'+self.ahu_name]) # log 
             
             self.ts_header.append('clg_coil_clo_temp_chg from AV_3050090') # log
-                        
-            # check if rhv_coils_hist already exists
-            for vav in self.vavs:
-                if ('rhv_coils_hist_' + vav) not in log_data_AV['Object_Name']:
-                    self.rhv_coils_hist['rhv_coils_hist_' + vav]= 0
-                    self.ts_data.append(-2) # log
-                    
-                    self.estimations['rhv_clo_temp_chg_' + vav] = 2
-                    self.ts_data.append(-2) # log 
-                    
-                else:
-                    self.rhv_coils_hist['rhv_coils_hist_' + vav] = log_data_AV['Present_Value'][np.char.find(log_data_AV['Object_Name'], 'rhv_coils_hist_'+ vav) >= 0][0]
-                    self.ts_data.append(self.rhv_coils_hist['rhv_coils_hist_' + vav]) # log       
-                    
-                    self.estimations['rhv_clo_temp_chg_' + vav] = log_data_AV['Present_Value'][np.char.find(log_data_AV['Object_Name'], 'rhv_clo_temp_chg_'+ vav) >= 0][0]
-                    self.ts_data.append(self.estimations['rhv_clo_temp_chg_' + vav]) # log 
-                
-                self.ts_header.append('rhv_coils_hist_' + vav + ' from AV_3050090') # log
-                self.ts_header.append('rhv_clo_temp_chg_' + vav + ' from AV_3050090') # log
-                
+                                        
         else:
             # update clg coil hist and temp_change_when_closed
             self.chw_coils_hist = 0
@@ -307,16 +288,6 @@ class CORE:
             self.ts_header.append('clg_coil_clo_temp_chg from AV_3050090') # log
             
             print('NO clg_coil_clo_temp_chg from AV_3050090, and default values used')
-            
-            # reheat coil hist exists for all vavs
-            for vav in self.vavs:
-                self.rhv_coils_hist['rhv_coils_hist_' + vav] = 0
-                self.ts_data.append(-1) # log
-                self.ts_header.append('rhv_coils_hist_' + vav + ' from AV_3050090') # log
-                
-                self.estimations['rhv_clo_temp_chg_' + vav] = 2
-                self.ts_data.append(-1) # log 
-                self.ts_header.append('rhv_clo_temp_chg_' + vav + ' from AV_3050090') # log
         
     def read_pump_power_csvs(self):
         for key, value in self.pump_dev_map.items():
@@ -335,7 +306,7 @@ class CORE:
                 
             if value in ['HWP_1_POWER', 'HWP_2_POWER']:
                 self.hw_pumps_power.append(pump_power)
-            
+        
     def get_last_good_SAT(self):
         folder_path = os.path.join(self.folder_dir, 'log', self.ahu_name)
         csv_files = glob.glob(os.path.join(folder_path, '*.csv'))
@@ -498,8 +469,8 @@ class CORE:
                         lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt = self.dehumd_limits
                         humd_SPmax = self.calc_sp_limit(self.cur_oa_dpwt, lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt)
                         
-                        # if dehumidification requires a step-change of over 0.5F
-                        humd_SPmax_adjust = max(self.cur_satsp - 0.5, humd_SPmax)
+                        # if dehumidification requires a step-change of over 1F
+                        humd_SPmax_adjust = max(self.cur_satsp - 1, humd_SPmax)
                             
                         self.max_sat_sp = min(self.max_sat_sp, humd_SPmax_adjust)
                         self.reset.SPmax = self.max_sat_sp
@@ -616,18 +587,18 @@ class CORE:
             new_ahu_data_AV = self.log_data(new_clgcoil_hist, self.ahu_data_AV, new_ahu_data_AV)
             
             # vav reheat coil
-            for vav in self.vavs:
-                # reheat coil temp change
-                new_rhv_tempchg_data = ('3050090', 'analog-value', '9999999', 'rhv_clo_temp_chg_' + vav, self.estimations['rhv_clo_temp_chg_' + vav], '°F')                                             
-                new_ahu_data_AV = self.log_data(new_rhv_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)            
-                self.ts_data.append(self.estimations['rhv_clo_temp_chg_' + vav]) # log 
-                self.ts_header.append('rhv_clo_temp_chg_' + vav) # log
+            # for vav in self.vavs:
+            #     # reheat coil temp change
+            #     new_rhv_tempchg_data = ('3050090', 'analog-value', '9999999', 'rhv_clo_temp_chg_' + vav, self.estimations['rhv_clo_temp_chg_' + vav], '°F')                                             
+            #     new_ahu_data_AV = self.log_data(new_rhv_tempchg_data, self.ahu_data_AV, new_ahu_data_AV)            
+            #     self.ts_data.append(self.estimations['rhv_clo_temp_chg_' + vav]) # log 
+            #     self.ts_header.append('rhv_clo_temp_chg_' + vav) # log
                 
-                # reheat coil hist
-                new_rhv_hist_data = ('3050090', 'analog-value', '9999999', 'rhv_coils_hist_' + vav, self.rhv_coils_hist['rhv_coils_hist_'+vav], '/')                  
-                new_ahu_data_AV = self.log_data(new_rhv_hist_data, self.ahu_data_AV, new_ahu_data_AV)
-                self.ts_data.append(self.rhv_coils_hist['rhv_coils_hist_'+vav]) # log 
-                self.ts_header.append('rhv_coils_hist_' + vav) # log
+            #     # reheat coil hist
+            #     new_rhv_hist_data = ('3050090', 'analog-value', '9999999', 'rhv_coils_hist_' + vav, self.rhv_coils_hist['rhv_coils_hist_'+vav], '/')                  
+            #     new_ahu_data_AV = self.log_data(new_rhv_hist_data, self.ahu_data_AV, new_ahu_data_AV)
+            #     self.ts_data.append(self.rhv_coils_hist['rhv_coils_hist_'+vav]) # log 
+            #     self.ts_header.append('rhv_coils_hist_' + vav) # log
             
             # write to AV_.csv
             overwrite_csv = os.path.join(self.folder_dir, f'AV_{self.ahu_dev_ID}_out.csv')
@@ -844,23 +815,23 @@ class CORE:
                 self.estimations['rhv_power_' + vav] = 0
                 self.ts_data += [0, 0, 0] # log
                 
-                ### for debugging and tracking purposes only
-                if self.rhv_coils_hist['rhv_coils_hist_'+vav] > 0:
-                    self.estimations['rhv_clo_temp_chg_' + vav] = ((zone_dat - self.cur_sat)*0.01) + (0.99*self.estimations['rhv_clo_temp_chg_' + vav])
+                # ### for debugging and tracking purposes only
+                # if self.rhv_coils_hist['rhv_coils_hist_'+vav] > 0:
+                #     self.estimations['rhv_clo_temp_chg_' + vav] = ((zone_dat - self.cur_sat)*0.01) + (0.99*self.estimations['rhv_clo_temp_chg_' + vav])
                 
-                self.rhv_coils_hist['rhv_coils_hist_'+vav] += 1
+                # self.rhv_coils_hist['rhv_coils_hist_'+vav] += 1
                 
             else:
                 self.estimations['rhv_power_delta_' + vav] = self.calc_heat_flow(new_zone_afr, -diff_sat)
                 self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
                
-                ### for debugging and tracking purposes only
-                self.rhv_coils_hist['rhv_coils_hist_'+vav] = 0
-                delta_T = zone_dat - self.estimations['rhv_clo_temp_chg_' + vav] - (cur_sat_sp + diff_sat)
-                diff_rhv_power = self.calc_heat_flow(new_zone_afr, delta_T)
-                self.ts_data += np.concatenate([arr.flatten() for arr in diff_rhv_power]).tolist() # log 
+            #     ### for debugging and tracking purposes only
+            #     self.rhv_coils_hist['rhv_coils_hist_'+vav] = 0
+            #     delta_T = zone_dat - self.estimations['rhv_clo_temp_chg_' + vav] - (cur_sat_sp + diff_sat)
+            #     diff_rhv_power = self.calc_heat_flow(new_zone_afr, delta_T)
+            #     self.ts_data += np.concatenate([arr.flatten() for arr in diff_rhv_power]).tolist() # log 
                 
-            self.ts_header += [vav+' rhv power for lo SAT (BTU/h)', vav+' rhv power for cur SAT (BTU/h)', vav+' rhv power for hi SAT (BTU/h)', ] # log
+            # self.ts_header += [vav+' rhv power for lo SAT (BTU/h)', vav+' rhv power for cur SAT (BTU/h)', vav+' rhv power for hi SAT (BTU/h)', ] # log
         
         diff_afr = self.estimations['diff_zone_tot_afr']
         afr_ratio = (afr + diff_afr)/afr
