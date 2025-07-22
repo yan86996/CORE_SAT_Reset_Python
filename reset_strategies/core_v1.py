@@ -813,7 +813,7 @@ class CORE:
             if reheat_pos == 0:
                 self.estimations['rhv_power_delta_' + vav] = np.zeros(len(diff_sat))
                 self.estimations['rhv_power_' + vav] = 0
-                self.ts_data += [0, 0, 0] # log
+                # self.ts_data += [0, 0, 0] # log
                 
                 # ### for debugging and tracking purposes only
                 # if self.rhv_coils_hist['rhv_coils_hist_'+vav] > 0:
