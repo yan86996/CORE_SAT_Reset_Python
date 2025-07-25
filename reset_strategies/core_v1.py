@@ -450,12 +450,6 @@ class CORE:
                 candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
                 candidate_sat = np.where(candidate_sat < self.min_sat_sp, self.min_sat_sp, candidate_sat)
                 diff_sat = candidate_sat - self.cur_satsp
-                
-                self.estimate_power(self.cur_satsp, diff_sat)
-                self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
-                self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
-                self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
-                self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']                    
 
                 # heating request
                 if self.htg_requests.R_htg > self.num_ignore_htg:                 
@@ -463,6 +457,12 @@ class CORE:
                     new_core_sat = self.reset.get_new_sp_htg(self.htg_requests.R_htg, self.cur_satsp)
                     core_finish = 2
                     print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for heating requests ######')
+                    
+                    self.estimate_power(self.cur_satsp, diff_sat)
+                    self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
+                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
+                    self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
+                    self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']       
                     
                 else:
                     if self.dehumid:
@@ -479,12 +479,12 @@ class CORE:
                         candidate_sat = np.where(candidate_sat > self.max_sat_sp, self.max_sat_sp, candidate_sat)
                         diff_sat = candidate_sat - self.cur_satsp
                     
-                        # estimate power consumption values under different setpoints for CORE
-                        self.estimate_power(self.cur_satsp, diff_sat)
-                        self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
-                        self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
-                        self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
-                        self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']                    
+                    # estimate power consumption values under different setpoints for CORE
+                    self.estimate_power(self.cur_satsp, diff_sat)
+                    self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
+                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
+                    self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
+                    self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']                    
 
                     # cooling request
                     if self.clg_requests.R_clg > self.num_ignore_clg:
@@ -512,7 +512,7 @@ class CORE:
                 # calculate the feasible range of diff_sat for G36
                 candidate_sat_g36 = self.diff_sat + self.g36_sat
                 # if dehumidification requires a step-change of over 0.5F
-                humd_SPmax_adjust_g36 = min(65, max(self.g36_sat - 0.5, humd_SPmax))
+                humd_SPmax_adjust_g36 = min(65, max(self.g36_sat - 1, humd_SPmax))
                 # sat setpoint range check
                 candidate_sat_g36 = np.where(candidate_sat_g36 > humd_SPmax_adjust_g36, humd_SPmax_adjust_g36, candidate_sat_g36)
                 candidate_sat_g36 = np.where(candidate_sat_g36 < 55, 55, candidate_sat_g36)
@@ -521,7 +521,7 @@ class CORE:
                 self.estimate_power_G36(self.g36_sat, diff_sat_g36)
                 # update cost estimation for G36 but NOT used for SAT selection
                 self.estimations['chw_cost_delta_G36'] = self.estimations['chw_power_delta_G36']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
-                self.estimations['rhv_cost_delta_G36'] = self.estimations['rhv_power_delta_G36']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
+                self.estimations['rhv_cost_delta_G36'] = self.estimations['rhv_power_delta_G36']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
                 self.estimations['fan_cost_delta_G36'] = self.estimations['fan_power_delta_G36'] * elec_pr
                 self.estimations['tot_cost_delta_G36'] = self.estimations['chw_cost_delta_G36'] + self.estimations['rhv_cost_delta_G36'] + self.estimations['fan_cost_delta_G36']
 
@@ -552,7 +552,7 @@ class CORE:
             if self.algo == 1:
                 algo_finish = g36_finish
                 new_ahu_data_AV['Present_Value'][idx_find] = self.g36_sat
-                print(f'# G36 picked for today: the new sat setpoint for {self.ahu_name} is {round(new_core_sat,2)}°F')
+                print(f'# G36 picked for today: the new sat setpoint for {self.ahu_name} is {round(self.g36_sat,2)}°F')
                       
             # write CORE new sat setpoint 
             elif self.algo == 2:
@@ -670,18 +670,12 @@ class CORE:
                 
             # heating setpoint
             htg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Heating Setpoint') >= 0][0]
-            self.ts_data.append(htg_sp) # log 
-            self.ts_header.append(vav +' heating setpoint') # log
             
             # cooling setpoint
             clg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Cooling Setpoint') >= 0][0]             
-            self.ts_data.append(clg_sp) # log 
-            self.ts_header.append(vav +' cooling setpoint') # log
             
             # room temp
             room_temp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Space Temperature') >= 0][0]        
-            self.ts_data.append(room_temp) # log 
-            self.ts_header.append(vav +' room temp') # log
             
             now = datetime.now().strftime("%Y-%m-%d %H:%M")
             # zone temp monitoring
