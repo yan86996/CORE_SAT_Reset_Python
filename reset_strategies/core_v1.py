@@ -460,8 +460,12 @@ class CORE:
                     
                     self.estimate_power(self.cur_satsp, diff_sat)
                     self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
-                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
                     self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
+                    
+                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
+                    if not any(x > 0 for x in self.hw_pumps_power):
+                        self.estimations['rhv_cost_delta'] = np.full(3, 0)
+                        
                     self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']       
                     
                 else:
@@ -482,8 +486,12 @@ class CORE:
                     # estimate power consumption values under different setpoints for CORE
                     self.estimate_power(self.cur_satsp, diff_sat)
                     self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
-                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
                     self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
+                    
+                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
+                    if not any(x > 0 for x in self.hw_pumps_power):
+                        self.estimations['rhv_cost_delta'] = np.full(3, 0)
+                    
                     self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']                    
 
                     # cooling request
@@ -496,10 +504,6 @@ class CORE:
                     # no comfort present
                     # run CORE algorithm
                     else:
-                        if not any(x > 0 for x in self.hw_pumps_power):
-                            print('###### NO HOT WATER SUPPLY. REMOVE REHEAT ENERGY COST ESTIMATES ######')
-                            self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['fan_cost_delta']                    
-                            
                         print(f'###### No comofort request, CORE runs for {self.ahu_name} ######')                                      
                         idx_opt = np.argmin(self.estimations['tot_cost_delta'])                   
                         new_core_sat = self.cur_satsp + diff_sat[idx_opt]
