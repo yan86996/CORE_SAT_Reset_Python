@@ -235,7 +235,12 @@ class CORE:
                     
                     # power
                     rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], value+'_POWER') >= 0][0]
+                    
+                    if self.ahu_name == 'AHU_6':
+                        rf_power *= 2.5 
+                    
                     vfd_rf_power += rf_power
+
                     self.ts_data.append(rf_power) # log
                     self.ts_header.append(self.ahu_name + ' ' + key + ' power(kW) ') # log
                     
@@ -488,7 +493,7 @@ class CORE:
                     self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
                     self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
                     
-                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.8 /950 *steam_pr  # steam (950 BTU/lb)
+                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
                     if not any(x > 0 for x in self.hw_pumps_power):
                         self.estimations['rhv_cost_delta'] = np.full(3, 0)
                     
