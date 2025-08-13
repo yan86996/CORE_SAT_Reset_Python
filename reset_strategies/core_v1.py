@@ -237,7 +237,7 @@ class CORE:
                     rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], value+'_POWER') >= 0][0]
                     
                     if self.ahu_name == 'AHU_6':
-                        rf_power *= 3.5 
+                        rf_power *= 2.5 
                     
                     vfd_rf_power += rf_power
 
@@ -343,6 +343,51 @@ class CORE:
             
         return last_CORE_SAT, time_CORE_lapesd
         
+    ######
+    ### zone temp montioring 
+    ######
+    def find_bad_zones(self, zone_temp_dev, zone_temp_lo, zone_temp_hi, sat_lo, sat_hi):
+        # bad zones: (2 degrees wider than htg/clg setpoint) or (below 65 or above 78F)
+        bad_zones = []     
+        # loop through each zone vav box
+        for vav in self.vavs:
+            div_ID = self.zone_dev_map[vav]
+            
+            # from AV_XXXX.csv
+            try:
+                zone_csv_AV = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
+                zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
+            except Exception as e:
+                print(e)
+                print(f'Failed to find AV_{div_ID}.csv') 
+                
+            # heating setpoint
+            htg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Heating Setpoint') >= 0][0]
+            
+            # cooling setpoint
+            clg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Cooling Setpoint') >= 0][0]             
+            
+            # room temp
+            room_temp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Space Temperature') >= 0][0]        
+            
+            now = datetime.now().strftime("%Y-%m-%d %H:%M")
+            # zone temp monitoring
+            # 5F (default) wider than the htg - clg setpoint range
+            if (room_temp < htg_sp - zone_temp_dev) or (room_temp > clg_sp + zone_temp_dev):
+                bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, {zone_temp_dev}F wider than the heating {htg_sp}F - cooling {clg_sp}F setpoint range')
+            # below zone_temp_lo (such as 65) or above zone_temp_lo (such as 78F)
+            elif (room_temp <zone_temp_lo) or (room_temp > zone_temp_hi):
+                bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, below {zone_temp_lo}F or above {zone_temp_hi}F')             
+                    
+        # sat or sat setpoint not in 55-65F
+        if (self.cur_sat < sat_lo) or (self.cur_sat > sat_hi):
+            bad_zones.append(f'the SAT OF {self.ahu_name} at {now} is {self.cur_sat}, not within {sat_lo}-{sat_hi}F')
+        
+        if (self.cur_satsp < sat_lo) or (self.cur_satsp > sat_hi):
+            bad_zones.append(f'the SAT setpoint OF {self.ahu_name} at {now} is {self.cur_sat}, not within {sat_lo}-{sat_hi}F')
+            
+        return bad_zones
+
     def get_new_satsp(self):
         # get the last good SAT values and time
         try:
@@ -464,13 +509,26 @@ class CORE:
                     print(f'###### SAT reset to {round(new_core_sat,2)} for {self.ahu_name} for heating requests ######')
                     
                     self.estimate_power(self.cur_satsp, diff_sat)
+                    
+                    # ΔPchw_lower, 0, ΔPchw_higher = self.estimations['chw_power_delta']
+                    # ΔPc_lower,   0, ΔPc_higher = self.estimations['chw_power_delta']/0.7
+                    # ΔCcool_lower, 0, ΔCcool_higher = self.estimations['chw_cost_delta']
                     self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
+                    
+                    # ΔPfan_lower, 0, ΔPfan_higher = self.estimations['fan_power_delta']
+                    # ΔCfan_lower, 0, ΔCfan_higher = self.estimations['fan_cost_delta']
                     self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
                     
+                    # ΔPhhw_lower, 0, ΔPhhw_higher = self.estimations['rhv_power_delta']
+                    # ΔPh_lower, 0, ΔPh_higher = self.estimations['rhv_power_delta']/0.9
+                    # ΔCheat_lower, 0, ΔCheat_higher = self.estimations['rhv_cost_delta']
                     self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
+                    
+                    # check HW supply using pump data
                     if not any(x > 0 for x in self.hw_pumps_power):
                         self.estimations['rhv_cost_delta'] = np.full(3, 0)
-                        
+                    
+                    # ΔC_lower, 0, ΔC_higher = self.estimations['tot_cost_delta']
                     self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']       
                     
                 else:
@@ -490,15 +548,27 @@ class CORE:
                     
                     # estimate power consumption values under different setpoints for CORE
                     self.estimate_power(self.cur_satsp, diff_sat)
+                    
+                    # ΔPchw_lower, 0, ΔPchw_higher = self.estimations['chw_power_delta']
+                    # ΔPc_lower,   0, ΔPc_higher = self.estimations['chw_power_delta']/0.7
+                    # ΔCcool_lower, 0, ΔCcool_higher = self.estimations['chw_cost_delta']
                     self.estimations['chw_cost_delta'] = self.estimations['chw_power_delta']/12000 *18 *steam_pr # 0.7 COP = 18 lbs/ ton of clg
+                                        
+                    # ΔPfan_lower, 0, ΔPfan_higher = self.estimations['fan_power_delta']
+                    # ΔCfan_lower, 0, ΔCfan_higher = self.estimations['fan_cost_delta']
                     self.estimations['fan_cost_delta'] = self.estimations['fan_power_delta'] * elec_pr
                     
+                    # ΔPhhw_lower, 0, ΔPhhw_higher = self.estimations['rhv_power_delta']
+                    # ΔPh_lower, 0, ΔPh_higher = self.estimations['rhv_power_delta']/0.9
+                    # ΔCheat_lower, 0, ΔCheat_higher = self.estimations['rhv_cost_delta']
                     self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
+                    
                     if not any(x > 0 for x in self.hw_pumps_power):
                         self.estimations['rhv_cost_delta'] = np.full(3, 0)
                     
-                    self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']                    
-
+                    # ΔC_lower, 0, ΔC_higher = self.estimations['tot_cost_delta']
+                    self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']
+                    
                     # cooling request
                     if self.clg_requests.R_clg > self.num_ignore_clg:
                         # use trim and respond without outside air based SAT setpoint limits
@@ -514,10 +584,33 @@ class CORE:
                         new_core_sat = self.cur_satsp + diff_sat[idx_opt]
                         
                         core_finish = 1
-                                    
+                
+                print(f"ΔPfan_lower : {self.estimations['fan_power_delta'][0]}")
+                print(f"ΔPfan_higher : {self.estimations['fan_power_delta'][-1]}")
+                print(f"ΔCfan_lower : {self.estimations['fan_cost_delta'][0]}")
+                print(f"ΔCfan_higher : {self.estimations['fan_cost_delta'][-1]}")
+                
+                print(f"ΔPchw_lower : {self.estimations['chw_power_delta'][0]}")
+                print(f"ΔPchw_higher : {self.estimations['chw_power_delta'][-1]}")
+                print(f"ΔPc_lower : {self.estimations['chw_power_delta'][0]/0.7}")
+                print(f"ΔPc_higher : {self.estimations['chw_power_delta'][-1]/0.7}")
+                print(f"ΔCcool_lower : {self.estimations['chw_cost_delta'][0]}")
+                print(f"ΔCcool_higher : {self.estimations['chw_cost_delta'][-1]}")        
+                
+                print(f"ΔPhhw_lower : {self.estimations['rhv_power_delta'][0]}")
+                print(f"ΔPhhw_higher : {self.estimations['rhv_power_delta'][-1]}")
+                print(f"ΔPh_lower : {self.estimations['rhv_power_delta'][0]/0.9}")
+                print(f"ΔPh_higher : {self.estimations['rhv_power_delta'][-1]/0.9}")
+                print(f"ΔCheat_lower : {self.estimations['rhv_cost_delta'][0]}")
+                print(f"ΔCheat_higher : {self.estimations['rhv_cost_delta'][-1]}")
+                
+                print(f"ΔC_lower : {self.estimations['tot_cost_delta'][0]}")
+                print(f"ΔC_higher : {self.estimations['tot_cost_delta'][-1]}")
+                    
                 self.ts_data.append(humd_SPmax) # log
                 self.ts_header.append('humd_SPmax') # log
                 
+                ## NOT USED FOR CORE 
                 # calculate the feasible range of diff_sat for G36
                 candidate_sat_g36 = self.diff_sat + self.g36_sat
                 # if dehumidification requires a step-change of over 0.5F
@@ -554,7 +647,7 @@ class CORE:
             self.ts_data.append(core_finish) # log
             self.ts_header.append('core finished') # log
                         
-            ## write SAT setpoint back 
+            ## write SAT setpoint back
             idx_find = [np.char.find(new_ahu_data_AV['Object_Name'], self.satsp_name)>=0][0]
             
             # write G36 new sat setpoint
@@ -658,51 +751,6 @@ class CORE:
             print('******* Failed to run CORE *******')
         
         print('-' * 80)
-    
-    ######
-    ### zone temp montioring 
-    ######
-    def find_bad_zones(self, zone_temp_dev, zone_temp_lo, zone_temp_hi, sat_lo, sat_hi):
-        # bad zones: (2 degrees wider than htg/clg setpoint) or (below 65 or above 78F)
-        bad_zones = []     
-        # loop through each zone vav box
-        for vav in self.vavs:
-            div_ID = self.zone_dev_map[vav]
-            
-            # from AV_XXXX.csv
-            try:
-                zone_csv_AV = os.path.join(self.folder_dir, f'AV_{div_ID}.csv')
-                zone_data_AV = np.genfromtxt(zone_csv_AV, delimiter=',', dtype=None, names=True, encoding='utf-8')
-            except Exception as e:
-                print(e)
-                print(f'Failed to find AV_{div_ID}.csv') 
-                
-            # heating setpoint
-            htg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Heating Setpoint') >= 0][0]
-            
-            # cooling setpoint
-            clg_sp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Cooling Setpoint') >= 0][0]             
-            
-            # room temp
-            room_temp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Space Temperature') >= 0][0]        
-            
-            now = datetime.now().strftime("%Y-%m-%d %H:%M")
-            # zone temp monitoring
-            # 5F (default) wider than the htg - clg setpoint range
-            if (room_temp < htg_sp - zone_temp_dev) or (room_temp > clg_sp + zone_temp_dev):
-                bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, {zone_temp_dev}F wider than the heating {htg_sp}F - cooling {clg_sp}F setpoint range')
-            # below zone_temp_lo (such as 65) or above zone_temp_lo (such as 78F)
-            elif (room_temp <zone_temp_lo) or (room_temp > zone_temp_hi):
-                bad_zones.append(f'look into {vav}: zone temp is {room_temp}F at {now}, below {zone_temp_lo}F or above {zone_temp_hi}F')             
-                    
-        # sat or sat setpoint not in 55-65F
-        if (self.cur_sat < sat_lo) or (self.cur_sat > sat_hi):
-            bad_zones.append(f'the SAT OF {self.ahu_name} at {now} is {self.cur_sat}, not within {sat_lo}-{sat_hi}F')
-        
-        if (self.cur_satsp < sat_lo) or (self.cur_satsp > sat_hi):
-            bad_zones.append(f'the SAT setpoint OF {self.ahu_name} at {now} is {self.cur_sat}, not within {sat_lo}-{sat_hi}F')
-            
-        return bad_zones
     
     ######
     ### Zone level calculations for reheat power and airflow under different SAT setpoints
@@ -821,19 +869,21 @@ class CORE:
                 # ### for debugging and tracking purposes only
                 # if self.rhv_coils_hist['rhv_coils_hist_'+vav] > 0:
                 #     self.estimations['rhv_clo_temp_chg_' + vav] = ((zone_dat - self.cur_sat)*0.01) + (0.99*self.estimations['rhv_clo_temp_chg_' + vav])
-                
                 # self.rhv_coils_hist['rhv_coils_hist_'+vav] += 1
                 
             else:
                 self.estimations['rhv_power_delta_' + vav] = self.calc_heat_flow(new_zone_afr, -diff_sat)
                 self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
-               
+            
+            # ΔPrh_lower, 0, ΔPrh_higher = self.estimations['rhv_power_delta_' + vav]
+            print(f"ΔPrh_lower {vav}: {self.estimations['rhv_power_delta_' + vav][0]}")
+            print(f"ΔPrh_higher {vav}: {self.estimations['rhv_power_delta_' + vav][-1]}")
+            
             #     ### for debugging and tracking purposes only
             #     self.rhv_coils_hist['rhv_coils_hist_'+vav] = 0
             #     delta_T = zone_dat - self.estimations['rhv_clo_temp_chg_' + vav] - (cur_sat_sp + diff_sat)
             #     diff_rhv_power = self.calc_heat_flow(new_zone_afr, delta_T)
-            #     self.ts_data += np.concatenate([arr.flatten() for arr in diff_rhv_power]).tolist() # log 
-                
+            #     self.ts_data += np.concatenate([arr.flatten() for arr in diff_rhv_power]).tolist() # log                
             # self.ts_header += [vav+' rhv power for lo SAT (BTU/h)', vav+' rhv power for cur SAT (BTU/h)', vav+' rhv power for hi SAT (BTU/h)', ] # log
         
         diff_afr = self.estimations['diff_zone_tot_afr']
@@ -858,6 +908,9 @@ class CORE:
             # valve closed during look-back window
             if self.hcv == 0 and self.chw_coils_hist > 0:
                 # update coil closed temp change and return heat flow estimate of zero
+                
+                # k-value for ΔTc calculation : 0.01
+                # ΔTc : {self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name]
                 self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] = ((self.cur_sat - self.mat)*0.01) + (0.99*self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name])        
                 # update trend/hist values
                 self.chw_coils_hist += 1
@@ -869,6 +922,8 @@ class CORE:
             # return heat flow estimate for each candidate sat
             # include predicted change in total airflow at each sat       
             # cur temp difference based on cur sat
+            
+            # ΔTc : self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name]
             curr_ahu_temp = cur_sat_sp - self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] - self.mat
             curr_chw_power = np.maximum(0.0, -self.calc_heat_flow(afr, curr_ahu_temp))
             
@@ -884,7 +939,10 @@ class CORE:
             
         self.ts_header += [' chw power for lo SAT (BTU/h)', ' chw power for cur SAT (BTU/h)', ' chw power for hi SAT (BTU/h)', ] # log
         self.estimations['diff_sat'] = diff_sat
-    
+        
+        print(f"k-value for ΔTc calculation:{0.01}")
+        print(f"ΔTc : {self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name]}")
+        
     def estimate_power_G36(self, cur_sat_sp, diff_sat):
         # difference from estimate_power: not updating the hist vars
         num = len(diff_sat)
@@ -1085,4 +1143,3 @@ class CORE:
             rv = val_at_lo_oat + val_range * (current_oat-lo_oat)/ oat_range
             
         return rv
-
