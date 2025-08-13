@@ -867,12 +867,13 @@ class CORE:
                 
             else:
                 self.estimations['rhv_power_delta_' + vav] = self.calc_heat_flow(new_zone_afr, -diff_sat)
-                self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
-            
-            # check HW supply using pump data
-            if not any(x > 0 for x in self.hw_pumps_power):
-                self.estimations['rhv_power_delta_' + vav] = np.full(3, 0)
                 
+                # check HW supply using pump data
+                if not any(x > 0 for x in self.hw_pumps_power):
+                    self.estimations['rhv_power_delta_' + vav] = np.zeros(len(diff_sat))
+                    
+                self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
+
             # ΔPrh_lower, 0, ΔPrh_higher = self.estimations['rhv_power_delta_' + vav]
             print(f"ΔPrh_lower {vav}: {self.estimations['rhv_power_delta_' + vav][0]}")
             print(f"ΔPrh_higher {vav}: {self.estimations['rhv_power_delta_' + vav][-1]}")
