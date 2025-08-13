@@ -522,11 +522,8 @@ class CORE:
                     # ΔPhhw_lower, 0, ΔPhhw_higher = self.estimations['rhv_power_delta']
                     # ΔPh_lower, 0, ΔPh_higher = self.estimations['rhv_power_delta']/0.9
                     # ΔCheat_lower, 0, ΔCheat_higher = self.estimations['rhv_cost_delta']
-                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
                     
-                    # check HW supply using pump data
-                    if not any(x > 0 for x in self.hw_pumps_power):
-                        self.estimations['rhv_cost_delta'] = np.full(3, 0)
+                    self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
                     
                     # ΔC_lower, 0, ΔC_higher = self.estimations['tot_cost_delta']
                     self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']       
@@ -560,11 +557,8 @@ class CORE:
                     
                     # ΔPhhw_lower, 0, ΔPhhw_higher = self.estimations['rhv_power_delta']
                     # ΔPh_lower, 0, ΔPh_higher = self.estimations['rhv_power_delta']/0.9
-                    # ΔCheat_lower, 0, ΔCheat_higher = self.estimations['rhv_cost_delta']
+                    # ΔCheat_lower, 0, ΔCheat_higher = self.estimations['rhv_cost_delta']               
                     self.estimations['rhv_cost_delta'] = self.estimations['rhv_power_delta']/0.9 /950 *steam_pr  # steam (950 BTU/lb)
-                    
-                    if not any(x > 0 for x in self.hw_pumps_power):
-                        self.estimations['rhv_cost_delta'] = np.full(3, 0)
                     
                     # ΔC_lower, 0, ΔC_higher = self.estimations['tot_cost_delta']
                     self.estimations['tot_cost_delta'] = self.estimations['chw_cost_delta'] + self.estimations['rhv_cost_delta'] + self.estimations['fan_cost_delta']
@@ -875,6 +869,10 @@ class CORE:
                 self.estimations['rhv_power_delta_' + vav] = self.calc_heat_flow(new_zone_afr, -diff_sat)
                 self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
             
+            # check HW supply using pump data
+            if not any(x > 0 for x in self.hw_pumps_power):
+                self.estimations['rhv_power_delta_' + vav] = np.full(3, 0)
+                
             # ΔPrh_lower, 0, ΔPrh_higher = self.estimations['rhv_power_delta_' + vav]
             print(f"ΔPrh_lower {vav}: {self.estimations['rhv_power_delta_' + vav][0]}")
             print(f"ΔPrh_higher {vav}: {self.estimations['rhv_power_delta_' + vav][-1]}")
