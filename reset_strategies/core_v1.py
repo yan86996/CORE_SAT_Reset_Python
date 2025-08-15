@@ -237,7 +237,7 @@ class CORE:
                     rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], value+'_POWER') >= 0][0]
                     
                     if self.ahu_name == 'AHU_6':
-                        rf_power *= 2.5 
+                        rf_power *= 1
                     
                     vfd_rf_power += rf_power
 
@@ -1142,3 +1142,4 @@ class CORE:
             rv = val_at_lo_oat + val_range * (current_oat-lo_oat)/ oat_range
             
         return rv
+
