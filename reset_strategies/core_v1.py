@@ -25,6 +25,8 @@ class CORE:
         self.max_off_time = max_off_time
         # hw pump power
         self.hw_pumps_power = []
+        # cw pump power
+        self.cw_pumps_power = []
         # sat changes
         self.diff_sat = np.asarray(diff_sat)
         
@@ -82,7 +84,17 @@ class CORE:
             cur_ratsp = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Return Air Setpoint') >= 0][0]
             self.ts_data.append(cur_ratsp) # log
             self.ts_header.append('cur RAT setpoint') # log 
-           
+            
+            # cur preheat temperature
+            self.preheat_temp = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Preheat Temperature') >= 0][0]
+            self.ts_data.append(self.preheat_temp) # log
+            self.ts_header.append('Preheat Temperature') # log
+            
+            # cur preheat temperature Setpoint
+            self.preheat_setpoint = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Preheat Setpoint') >= 0][0]
+            self.ts_data.append(self.preheat_setpoint) # log
+            self.ts_header.append('Preheat Setpoint') # log
+            
             # cur oat
             self.cur_oat = ahu_data_AV['Present_Value'][np.char.find(ahu_data_AV['Object_Name'], 'Outside Air Temperature') >= 0][0]
             self.ts_data.append(self.cur_oat) # log
@@ -237,7 +249,7 @@ class CORE:
                     rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], value+'_POWER') >= 0][0]
                     
                     if self.ahu_name == 'AHU_6':
-                        rf_power *= 1
+                        rf_power *= 2.5 
                     
                     vfd_rf_power += rf_power
 
@@ -311,6 +323,9 @@ class CORE:
                 
             if value in ['HWP_1_POWER', 'HWP_2_POWER']:
                 self.hw_pumps_power.append(pump_power)
+            
+            if value in ['CWP_1_POWER', 'CWP_2_POWER', 'CWP_3_POWER', 'CWP_4_POWER', 'CWP_5_POWER', ]:
+                self.cw_pumps_power.append(pump_power)
         
     def get_last_good_SAT(self):
         folder_path = os.path.join(self.folder_dir, 'log', self.ahu_name)
@@ -470,7 +485,13 @@ class CORE:
                 
             # read hist vars
             self.read_hist_vars_csvs()
-                
+            
+            # read and log HW and CHW pump power data
+            self.read_pump_power_csvs()
+            
+            # read ahu mode data
+            self.read_ahu_mode()
+            
             #  initialize cost estimates
             self.estimations['chw_cost_delta_G36'] = np.full(3, np.nan)
             self.estimations['rhv_cost_delta_G36'] = np.full(3, np.nan)
@@ -579,27 +600,27 @@ class CORE:
                         
                         core_finish = 1
                 
-                print(f"ΔPfan_lower : {self.estimations['fan_power_delta'][0]}")
-                print(f"ΔPfan_higher : {self.estimations['fan_power_delta'][-1]}")
-                print(f"ΔCfan_lower : {self.estimations['fan_cost_delta'][0]}")
-                print(f"ΔCfan_higher : {self.estimations['fan_cost_delta'][-1]}")
+                # print(f"ΔPfan_lower : {self.estimations['fan_power_delta'][0]}")
+                # print(f"ΔPfan_higher : {self.estimations['fan_power_delta'][-1]}")
+                # print(f"ΔCfan_lower : {self.estimations['fan_cost_delta'][0]}")
+                # print(f"ΔCfan_higher : {self.estimations['fan_cost_delta'][-1]}")
                 
-                print(f"ΔPchw_lower : {self.estimations['chw_power_delta'][0]}")
-                print(f"ΔPchw_higher : {self.estimations['chw_power_delta'][-1]}")
-                print(f"ΔPc_lower : {self.estimations['chw_power_delta'][0]/0.7}")
-                print(f"ΔPc_higher : {self.estimations['chw_power_delta'][-1]/0.7}")
-                print(f"ΔCcool_lower : {self.estimations['chw_cost_delta'][0]}")
-                print(f"ΔCcool_higher : {self.estimations['chw_cost_delta'][-1]}")        
+                # print(f"ΔPchw_lower : {self.estimations['chw_power_delta'][0]}")
+                # print(f"ΔPchw_higher : {self.estimations['chw_power_delta'][-1]}")
+                # print(f"ΔPc_lower : {self.estimations['chw_power_delta'][0]/0.7}")
+                # print(f"ΔPc_higher : {self.estimations['chw_power_delta'][-1]/0.7}")
+                # print(f"ΔCcool_lower : {self.estimations['chw_cost_delta'][0]}")
+                # print(f"ΔCcool_higher : {self.estimations['chw_cost_delta'][-1]}")        
                 
-                print(f"ΔPhhw_lower : {self.estimations['rhv_power_delta'][0]}")
-                print(f"ΔPhhw_higher : {self.estimations['rhv_power_delta'][-1]}")
-                print(f"ΔPh_lower : {self.estimations['rhv_power_delta'][0]/0.9}")
-                print(f"ΔPh_higher : {self.estimations['rhv_power_delta'][-1]/0.9}")
-                print(f"ΔCheat_lower : {self.estimations['rhv_cost_delta'][0]}")
-                print(f"ΔCheat_higher : {self.estimations['rhv_cost_delta'][-1]}")
+                # print(f"ΔPhhw_lower : {self.estimations['rhv_power_delta'][0]}")
+                # print(f"ΔPhhw_higher : {self.estimations['rhv_power_delta'][-1]}")
+                # print(f"ΔPh_lower : {self.estimations['rhv_power_delta'][0]/0.9}")
+                # print(f"ΔPh_higher : {self.estimations['rhv_power_delta'][-1]/0.9}")
+                # print(f"ΔCheat_lower : {self.estimations['rhv_cost_delta'][0]}")
+                # print(f"ΔCheat_higher : {self.estimations['rhv_cost_delta'][-1]}")
                 
-                print(f"ΔC_lower : {self.estimations['tot_cost_delta'][0]}")
-                print(f"ΔC_higher : {self.estimations['tot_cost_delta'][-1]}")
+                # print(f"ΔC_lower : {self.estimations['tot_cost_delta'][0]}")
+                # print(f"ΔC_higher : {self.estimations['tot_cost_delta'][-1]}")
                     
                 self.ts_data.append(humd_SPmax) # log
                 self.ts_header.append('humd_SPmax') # log
@@ -729,11 +750,7 @@ class CORE:
                                'rhv_cost_delta_lo_G36',    'rhv_cost_delta_G36',    'rhv_cost_delta_hi_G36',
                                'fan_cost_delta_lo_G36',    'fan_cost_delta_G36',    'fan_cost_delta_hi_G36',
                               ] 
-             
-            # read and log HW and CHW pump power data
-            self.read_pump_power_csvs()
-            self.read_ahu_mode()
-            
+    
             # combine all vars to save
             data2save = core_cal_list + self.ts_data
             header = core_cal_header + self.ts_header
@@ -875,8 +892,8 @@ class CORE:
                 self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
 
             # ΔPrh_lower, 0, ΔPrh_higher = self.estimations['rhv_power_delta_' + vav]
-            print(f"ΔPrh_lower {vav}: {self.estimations['rhv_power_delta_' + vav][0]}")
-            print(f"ΔPrh_higher {vav}: {self.estimations['rhv_power_delta_' + vav][-1]}")
+            # print(f"ΔPrh_lower {vav}: {self.estimations['rhv_power_delta_' + vav][0]}")
+            # print(f"ΔPrh_higher {vav}: {self.estimations['rhv_power_delta_' + vav][-1]}")
             
             #     ### for debugging and tracking purposes only
             #     self.rhv_coils_hist['rhv_coils_hist_'+vav] = 0
@@ -900,14 +917,28 @@ class CORE:
         fan_power_delta = diff_fan_power - cur_power
         
         self.estimations['fan_power_delta'] += fan_power_delta
-            
+        
         # Chilled water temp change and power for each AHU under different SAT setpoints
         # estimate the inherent temperature change between in & out temperature    
         if self.ccv == 0: 
+            print('Cooling Coil Closed. Reset Cooling Power to 0')
             # valve closed during look-back window
             if self.hcv == 0 and self.chw_coils_hist > 0:
                 # update coil closed temp change and return heat flow estimate of zero
                 
+                # k-value for ΔTc calculation : 0.01
+                # ΔTc : {self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name]
+                self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] = ((self.cur_sat - self.mat)*0.01) + (0.99*self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name])        
+                # update trend/hist values
+                self.chw_coils_hist += 1
+                
+            self.estimations['chw_power_delta'] = np.zeros(len(diff_sat))
+            self.ts_data += [0, 0, 0] # log 
+        
+        elif self.ccv == np.nan and (not any(x > 0 for x in self.cw_pumps_power)): 
+            print('Cooling Coil Value is NaN and all Chilled Water Pump Power are 0. Reset Cooling Power to 0')
+            # valve closed during look-back window
+            if self.hcv == 0 and self.chw_coils_hist > 0:                
                 # k-value for ΔTc calculation : 0.01
                 # ΔTc : {self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name]
                 self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name] = ((self.cur_sat - self.mat)*0.01) + (0.99*self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name])        
@@ -939,8 +970,8 @@ class CORE:
         self.ts_header += [' chw power for lo SAT (BTU/h)', ' chw power for cur SAT (BTU/h)', ' chw power for hi SAT (BTU/h)', ] # log
         self.estimations['diff_sat'] = diff_sat
         
-        print(f"k-value for ΔTc calculation:{0.01}")
-        print(f"ΔTc : {self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name]}")
+        # print(f"k-value for ΔTc calculation:{0.01}")
+        # print(f"ΔTc : {self.estimations['clg_coil_clo_temp_chg_' + self.ahu_name]}")
         
     def estimate_power_G36(self, cur_sat_sp, diff_sat):
         # difference from estimate_power: not updating the hist vars
@@ -1142,4 +1173,3 @@ class CORE:
             rv = val_at_lo_oat + val_range * (current_oat-lo_oat)/ oat_range
             
         return rv
-
