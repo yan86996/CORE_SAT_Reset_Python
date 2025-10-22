@@ -249,7 +249,7 @@ class CORE:
                     rf_power = rf_data_AV['Present_Value'][np.char.find(rf_data_AV['Object_Name'], value+'_POWER') >= 0][0]
                     
                     if self.ahu_name == 'AHU_6':
-                        rf_power *= 2.5 
+                        rf_power *= 1
                     
                     vfd_rf_power += rf_power
 
@@ -890,7 +890,7 @@ class CORE:
                     self.estimations['rhv_power_delta_' + vav] = np.zeros(len(diff_sat))
                     
                 self.estimations['rhv_power_delta'] += self.estimations['rhv_power_delta_' + vav]
-
+                
             # ΔPrh_lower, 0, ΔPrh_higher = self.estimations['rhv_power_delta_' + vav]
             # print(f"ΔPrh_lower {vav}: {self.estimations['rhv_power_delta_' + vav][0]}")
             # print(f"ΔPrh_higher {vav}: {self.estimations['rhv_power_delta_' + vav][-1]}")
@@ -904,7 +904,11 @@ class CORE:
         
         diff_afr = self.estimations['diff_zone_tot_afr']
         afr_ratio = (afr + diff_afr)/afr
-        
+
+        # ΔVs_lower, 0, ΔVs_higher = self.estimations['diff_zone_tot_afr']
+        print(f"ΔVs_lower: {self.estimations['diff_zone_tot_afr'][0]}")
+        print(f"ΔVs_higher: {self.estimations['diff_zone_tot_afr'][-1]}")
+            
         ### fan power based on vfd percent out and motor rating
         # for each candidate sat (based on fan power law)
         # supply + return fans 
@@ -1173,3 +1177,5 @@ class CORE:
             rv = val_at_lo_oat + val_range * (current_oat-lo_oat)/ oat_range
             
         return rv
+
+
