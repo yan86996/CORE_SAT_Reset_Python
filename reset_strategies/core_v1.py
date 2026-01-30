@@ -385,6 +385,21 @@ class CORE:
             # room temp
             room_temp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Space Temperature') >= 0][0]        
             
+            # vav status from controller
+            vav_status_raw = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'VAV Status Value') >= 0][0]  
+
+            try:
+                vav_status_code = int(float(vav_status_raw))
+            except (ValueError, TypeError):
+                vav_status_code = None
+
+            vav_status_map = {
+                    1: 'deadband',
+                    2: 'heating',
+                    3: 'cooling'
+                    }
+            vav_status = vav_status_map.get(vav_status_code, None) #TJ added new lines upto this: 2026-1-28
+
             now = datetime.now().strftime("%Y-%m-%d %H:%M")
             # zone temp monitoring
             # 5F (default) wider than the htg - clg setpoint range
@@ -865,7 +880,7 @@ class CORE:
             self.ts_header.append(vav +' damper position') # log
             
             # calculate AFR difference under different SAT setpoints
-            diff_zone_afr = self.calc_diff_zone_afr(reheat_pos, cur_sat_sp, diff_sat, zone_afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
+            diff_zone_afr = self.calc_diff_zone_afr(vav_status, reheat_pos, cur_sat_sp, diff_sat, zone_afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
             self.estimations['diff_zone_tot_afr'] += diff_zone_afr
             new_zone_afr = zone_afr + diff_zone_afr
             
@@ -1021,7 +1036,7 @@ class CORE:
             # reheat
             reheat_pos = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Reheat Valve Position') >= 0][0]
             # calculate AFR difference under different SAT setpoints
-            diff_zone_afr = self.calc_diff_zone_afr(reheat_pos, cur_sat_sp, diff_sat, zone_afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
+            diff_zone_afr = self.calc_diff_zone_afr(vav_status, reheat_pos, cur_sat_sp, diff_sat, zone_afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
             self.estimations['diff_zone_tot_afr_G36'] += diff_zone_afr
             new_zone_afr = zone_afr + diff_zone_afr
             
@@ -1083,47 +1098,119 @@ class CORE:
         return volumetric_flow * delta_temperature * 1.08  # [Unit: BTU/hr]
     
     # get new air flow rate for different SATs
-    def calc_diff_zone_afr(self, reheat_pos, cur_sat, diff_sat, afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg):      
-        # heating or deadband
-        # CHECK REHEAT POS RANGE/VALUE
-        if (reheat_pos > 20) or (htg_sp <= room_temp <= clg_sp) or (clg < 0.1):
-            diff_zone_afr = np.zeros(len(diff_sat))
-            
-        # cooling
-        else:
-            afr = np.minimum(np.maximum(afr, afr_min), afr_max)
+    def calc_diff_zone_afr(self, vav_status, reheat_pos, cur_sat, diff_sat, afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg):
+        
+        
+        # rely on VAV box state value from controller to determine VAV box state if present
+        if vav_status in ['deadband', 'heating', 'cooling']:
+            # Non-cooling zones or minimum-flow zones
+            if (vav_status in ['deadband', 'heating']):
+                diff_zone_afr = np.zeros(len(diff_sat))
 
-            ### actual deltaT vs assumed deltaT to be checked later
-            new_zone_afr = []
-            for x in diff_sat:
-                if (clg_sp - (cur_sat + x) - 2) == 0:
-                    value = afr * (clg_sp - cur_sat - 1.99) / (clg_sp - (cur_sat + x) - 1.99)
-                else:
-                    value = afr * (clg_sp - cur_sat - 2) / (clg_sp - (cur_sat + x) - 2)
-                    
-                new_zone_afr.append(value)
-                        
-            new_zone_afr = np.minimum(np.maximum(new_zone_afr, afr_min), afr_max)
-            
-            if 0.1 < clg < 99.9:
-                diff_zone_afr = new_zone_afr - afr
-                
+            # Cooling zones
             else:
-                if room_temp > clg_sp:
-                    # zone way past capacity, afr will not change regardless of sat
-                    diff_zone_afr = np.zeros(len(diff_sat))
+                afr = np.minimum(np.maximum(afr, afr_min), afr_max)
+
+                new_zone_afr = []
+                for x in diff_sat:
+                    denom = (clg_sp - (cur_sat + x) - 2)
+                    if denom == 0:
+                        value = afr
+                    else:
+                        value = afr * (clg_sp - cur_sat - 2) / denom
+                    new_zone_afr.append(value)
+
+                new_zone_afr = np.minimum(np.maximum(new_zone_afr, afr_min), afr_max)
+
+                if 0.1 < clg < 99.9:
+                    diff_zone_afr = new_zone_afr - afr
                 else:
-                    # zone at capacity, afr can only decrease, no further increase possible
                     diff_zone_afr = np.minimum(afr, new_zone_afr) - afr
-            
+
+        else:
+            # If vav box state variable does not match one of three expected states,
+            # estimate state based on reheat valve position and airflow
+            ## heating or deadband 
+            if (reheat_pos > 20) or (clg < 0.1):
+                diff_zone_afr = np.zeros(len(diff_sat))
+
+            # cooling 
+            else:
+                afr = np.minimum(np.maximum(afr, afr_min), afr_max)
+
+                new_zone_afr = []
+                for x in diff_sat:
+                    denom = (clg_sp - (cur_sat + x) - 2)
+                    if denom == 0:
+                        value = afr * (clg_sp - cur_sat - 1.99) / (clg_sp - (cur_sat + x) - 1.99)
+                    else:
+                        value = afr * (clg_sp - cur_sat - 2) / denom
+                    new_zone_afr.append(value)
+
+                new_zone_afr = np.minimum(np.maximum(new_zone_afr, afr_min), afr_max)
+
+                if 0.1 < clg < 99.9:
+                    diff_zone_afr = new_zone_afr - afr
+                else:
+                    if room_temp > clg_sp:
+                        diff_zone_afr = np.zeros(len(diff_sat))
+                    else:
+                        diff_zone_afr = np.minimum(afr, new_zone_afr) - afr
+
         if np.any(np.isnan(diff_zone_afr)):
             print('issue encountered in calc_diff_zone_afr()')
-            print('new_zone_afr:%s'%new_zone_afr)
-            print('diff_zone_afr:%s'%diff_zone_afr)
-            print('cur_sat=%s, diff_sat=%s, afr=%s, cur_clg_sp=%s, room_temp=%s, afr_min=%s, afr_max=%s, clg=%s'%(cur_sat, diff_sat, afr, clg_sp, room_temp, afr_min, afr_max, clg))
+            print('diff_zone_afr:%s' % diff_zone_afr)
+            print(
+                'cur_sat=%s, diff_sat=%s, afr=%s, vav_status=%s, '
+                'room_temp=%s, htg_sp=%s, clg_sp=%s, afr_min=%s, afr_max=%s, clg=%s'
+                % (cur_sat, diff_sat, afr, vav_status,
+                   room_temp, htg_sp, clg_sp, afr_min, afr_max, clg)
+            )
             diff_zone_afr = np.zeros(len(diff_sat))
-        
+
         return diff_zone_afr
+    
+    # def calc_diff_zone_afr(self, reheat_pos, cur_sat, diff_sat, afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg):      
+    #     # heating or deadband
+    #     # CHECK REHEAT POS RANGE/VALUE
+    #     if (reheat_pos > 20) or (htg_sp <= room_temp <= clg_sp) or (clg < 0.1): ##else statement to remove the room temp condition
+    #         diff_zone_afr = np.zeros(len(diff_sat))
+            
+    #     # cooling
+    #     else:
+    #         afr = np.minimum(np.maximum(afr, afr_min), afr_max)
+
+    #         ### actual deltaT vs assumed deltaT to be checked later
+    #         new_zone_afr = []
+    #         for x in diff_sat:
+    #             if (clg_sp - (cur_sat + x) - 2) == 0:
+    #                 value = afr * (clg_sp - cur_sat - 1.99) / (clg_sp - (cur_sat + x) - 1.99)
+    #             else:
+    #                 value = afr * (clg_sp - cur_sat - 2) / (clg_sp - (cur_sat + x) - 2)
+                    
+    #             new_zone_afr.append(value)
+                        
+    #         new_zone_afr = np.minimum(np.maximum(new_zone_afr, afr_min), afr_max)
+            
+    #         if 0.1 < clg < 99.9:
+    #             diff_zone_afr = new_zone_afr - afr
+                
+    #         else:
+    #             if room_temp > clg_sp:
+    #                 # zone way past capacity, afr will not change regardless of sat
+    #                 diff_zone_afr = np.zeros(len(diff_sat))
+    #             else:
+    #                 # zone at capacity, afr can only decrease, no further increase possible
+    #                 diff_zone_afr = np.minimum(afr, new_zone_afr) - afr
+            
+    #     if np.any(np.isnan(diff_zone_afr)):
+    #         print('issue encountered in calc_diff_zone_afr()')
+    #         print('new_zone_afr:%s'%new_zone_afr)
+    #         print('diff_zone_afr:%s'%diff_zone_afr)
+    #         print('cur_sat=%s, diff_sat=%s, afr=%s, cur_clg_sp=%s, room_temp=%s, afr_min=%s, afr_max=%s, clg=%s'%(cur_sat, diff_sat, afr, clg_sp, room_temp, afr_min, afr_max, clg))
+    #         diff_zone_afr = np.zeros(len(diff_sat))
+        
+    #     return diff_zone_afr
     
     def save_data_bydate(self, data2save, header, folder_dir, ahu_name):
         # get the current date to name the file
