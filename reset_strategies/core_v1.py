@@ -386,19 +386,7 @@ class CORE:
             room_temp = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Space Temperature') >= 0][0]        
             
             # vav status from controller
-            vav_status_raw = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'VAV Status Value') >= 0][0]  
-
-            try:
-                vav_status_code = int(float(vav_status_raw))
-            except (ValueError, TypeError):
-                vav_status_code = None
-
-            vav_status_map = {
-                    1: 'deadband',
-                    2: 'heating',
-                    3: 'cooling'
-                    }
-            vav_status = vav_status_map.get(vav_status_code, None) #TJ added new lines upto this: 2026-1-28
+            vav_status = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'VAV Status Value') >= 0][0]  
 
             now = datetime.now().strftime("%Y-%m-%d %H:%M")
             # zone temp monitoring
@@ -880,6 +868,7 @@ class CORE:
             self.ts_header.append(vav +' damper position') # log
             
             # calculate AFR difference under different SAT setpoints
+            vav_status = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'VAV Status Value') >= 0][0]  
             diff_zone_afr = self.calc_diff_zone_afr(vav_status, reheat_pos, cur_sat_sp, diff_sat, zone_afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
             self.estimations['diff_zone_tot_afr'] += diff_zone_afr
             new_zone_afr = zone_afr + diff_zone_afr
@@ -1036,6 +1025,7 @@ class CORE:
             # reheat
             reheat_pos = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'Reheat Valve Position') >= 0][0]
             # calculate AFR difference under different SAT setpoints
+            vav_status = zone_data_AV['Present_Value'][np.char.find(zone_data_AV['Object_Name'], 'VAV Status Value') >= 0][0]
             diff_zone_afr = self.calc_diff_zone_afr(vav_status, reheat_pos, cur_sat_sp, diff_sat, zone_afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg)
             self.estimations['diff_zone_tot_afr_G36'] += diff_zone_afr
             new_zone_afr = zone_afr + diff_zone_afr
@@ -1102,9 +1092,9 @@ class CORE:
         
         
         # rely on VAV box state value from controller to determine VAV box state if present
-        if vav_status in ['deadband', 'heating', 'cooling']:
+        if vav_status in [1,2,3]: # 1-deadband, 2-cooling, 3-heating
             # Non-cooling zones or minimum-flow zones
-            if (vav_status in ['deadband', 'heating']):
+            if (vav_status in [1,2]):
                 diff_zone_afr = np.zeros(len(diff_sat))
 
             # Cooling zones
