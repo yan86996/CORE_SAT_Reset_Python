@@ -1158,6 +1158,17 @@ class CORE:
             )
             diff_zone_afr = np.zeros(len(diff_sat))
 
+        print("VAV ALT FLOW DEBUG")
+        print(f"vav_status: {vav_status}")
+        print(f"current afr: {afr}")
+
+        if 'new_zone_afr' in locals():  
+            print(f"new_zone_afr: {new_zone_afr}")
+        else:
+            print("Not in cooling mode")
+
+        print(f"diff_zone_afr: {diff_zone_afr}")
+        
         return diff_zone_afr
     
     # def calc_diff_zone_afr(self, reheat_pos, cur_sat, diff_sat, afr, htg_sp, clg_sp, room_temp, afr_min, afr_max, clg):      
