@@ -115,7 +115,7 @@ if __name__=='__main__':
             
             temperature_reset_CORE = reset.Reset(SPmin=sat_min, SPmax=sat_max, num_ignore_clg=num_ignore_clg, num_ignore_htg=num_ignore_htg, SPtrim=sp_trim, SPres=sp_res, SPres_max=sp_res_max)
             
-            dehumd_limits = (55, 60, 65, 60) # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
+            dehumd_limits = (55, 60, 65, 58) # lo_oa_dwpt, hi_oa_dwpt, spmax_at_lo_oat_dwpt, spmax_at_hi_oat_dwpt
             
             core_control = CORE(algo=algo, core_version=core_version, max_off_time=max_off_time, dehumid=True, dehumd_limits=dehumd_limits, g36_sat=g36_sat, folder_dir=folder_dir, zone_names=zones, ahu_name=ahu,        
                                 zone_dev_map=devID_zoneID, vdf_dev_map=devID_vfdID, pump_dev_map=devID_pumpID, ahu_dev_map=devID_ahuID,
